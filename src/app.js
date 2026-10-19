@@ -1,12 +1,17 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
+const { authLimiter, postLimiter } = require('./middleware/rateLimit');
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
 const userRoutes = require('./routes/user.routes');
 
 const app = express();
+
+// Trust reverse proxy (Render, Railway, Fly.io, etc.)
+app.set('trust proxy', 1);
 
 // Ensure public/uploads directory exists
 const uploadsDir = path.join(__dirname, '../public/uploads');
@@ -14,8 +19,20 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Security headers with Helmet and custom Content Security Policy
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'img-src': ["'self'", 'data:', 'https://res.cloudinary.com', 'https://images.unsplash.com'],
+      },
+    },
+  })
+);
+
 // Core middleware
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -23,8 +40,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Versioned API routes
-app.use('/api/v1/auth', authRoutes);
+// Versioned API routes with rate limiters
+app.use('/api/v1/auth', authLimiter, authRoutes);
+app.post('/api/v1/posts', postLimiter);
 app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/users', userRoutes);
 
