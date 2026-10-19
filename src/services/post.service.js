@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
 const { Post, User, Follow, sequelize } = require('../models');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
 /**
  * Helper to unlink an uploaded file if validation or creation fails.
@@ -37,7 +38,18 @@ async function createPost({ userId, content, file }) {
     throw error;
   }
 
-  const imageUrl = file ? `/uploads/${file.filename}` : null;
+  let imageUrl = null;
+  let uploadedToCloud = false;
+
+  if (file) {
+    if (file.buffer) {
+      const uploadResult = await uploadToCloudinary(file.buffer);
+      imageUrl = uploadResult.secure_url;
+      uploadedToCloud = true;
+    } else if (file.filename) {
+      imageUrl = `/uploads/${file.filename}`;
+    }
+  }
 
   try {
     const post = await Post.create({
@@ -49,6 +61,13 @@ async function createPost({ userId, content, file }) {
     return await getPostById(post.id, userId);
   } catch (err) {
     cleanupUploadedFile(file);
+    if (uploadedToCloud && imageUrl) {
+      try {
+        await deleteFromCloudinary(imageUrl);
+      } catch (delErr) {
+        console.error('Failed to clean up Cloudinary image on post creation failure:', delErr);
+      }
+    }
     throw err;
   }
 }
@@ -232,14 +251,23 @@ async function deletePost({ postId, userId }) {
   }
 
   if (post.image_url) {
-    const filename = path.basename(post.image_url);
-    const filePath = path.join(__dirname, '../../public/uploads', filename);
-    if (fs.existsSync(filePath)) {
+    if (post.image_url.includes('res.cloudinary.com')) {
       try {
-        fs.unlinkSync(filePath);
+        await deleteFromCloudinary(post.image_url);
       } catch (err) {
         // Log error silently, do not block post deletion
-        console.error('Error removing post media file:', err);
+        console.error('Error removing Cloudinary asset:', err);
+      }
+    } else {
+      const filename = path.basename(post.image_url);
+      const filePath = path.join(__dirname, '../../public/uploads', filename);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (err) {
+          // Log error silently, do not block post deletion
+          console.error('Error removing post media file:', err);
+        }
       }
     }
   }

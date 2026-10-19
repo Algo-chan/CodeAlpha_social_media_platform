@@ -1,13 +1,14 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { isCloudinaryConfigured } = require('../utils/cloudinary');
 
 const uploadsDir = path.join(__dirname, '../../public/uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
@@ -17,6 +18,8 @@ const storage = multer.diskStorage({
     cb(null, `${uniqueSuffix}${ext}`);
   },
 });
+
+const memoryStorage = multer.memoryStorage();
 
 const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
@@ -31,19 +34,29 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
+const limits = {
+  fileSize: 5 * 1024 * 1024, // 5MB limit
+};
+
+const diskUpload = multer({
+  storage: diskStorage,
+  limits,
+  fileFilter,
+});
+
+const memoryUpload = multer({
+  storage: memoryStorage,
+  limits,
   fileFilter,
 });
 
 /**
  * Express middleware wrapper for single image upload with normalized error handling.
+ * Dynamically selects memoryStorage when Cloudinary is configured, otherwise falls back to diskStorage.
  */
 function uploadPostMedia(req, res, next) {
-  const singleUpload = upload.single('image');
+  const uploader = isCloudinaryConfigured() ? memoryUpload : diskUpload;
+  const singleUpload = uploader.single('image');
 
   singleUpload(req, res, (err) => {
     if (err) {
@@ -80,6 +93,6 @@ function uploadPostMedia(req, res, next) {
 }
 
 module.exports = {
-  upload,
+  upload: diskUpload,
   uploadPostMedia,
 };
