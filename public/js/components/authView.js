@@ -1,11 +1,15 @@
 /**
- * AuthView Component
- * Renders Login and Register views, handles gated redirect reason banner
- * ("Create an account or sign in to like, comment, and connect"),
- * and navigates back to original target upon successful authentication.
+ * AuthView
+ * Log in and sign up in one card. When a signed-out visitor hits a gated
+ * action, the reason banner explains why they landed here, and a successful
+ * sign-in returns them to whatever they were trying to do.
  */
 (function (global) {
   'use strict';
+
+  function icon(name, opts) {
+    return global.icons && global.icons.svg ? global.icons.svg(name, opts) : '';
+  }
 
   function parseQueryParams(hash) {
     var h = hash || (typeof window !== 'undefined' ? window.location.hash : '');
@@ -13,33 +17,63 @@
     var params = {};
     if (qIndex === -1) return params;
 
-    var queryString = h.substring(qIndex + 1);
-    var pairs = queryString.split('&');
+    var pairs = h.substring(qIndex + 1).split('&');
     for (var i = 0; i < pairs.length; i++) {
       var pair = pairs[i].split('=');
-      if (pair[0]) {
-        params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
-      }
+      if (pair[0]) params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
     }
     return params;
   }
 
   function getRedirectTarget(params) {
-    if (params && params.redirect) {
-      return params.redirect;
+    return params && params.redirect ? params.redirect : '#explore';
+  }
+
+  function setFieldError(input, message) {
+    if (!input) return;
+    var group = input.closest ? input.closest('.form-group') : null;
+    if (group) group.classList.add('field-error');
+
+    var err = input.parentNode ? input.parentNode.querySelector('.form-error') : null;
+    if (err) {
+      err.textContent = message;
+      return;
     }
-    return '#explore';
+    if (!input.parentNode || typeof document === 'undefined') return;
+    err = document.createElement('span');
+    err.className = 'form-error';
+    err.textContent = message;
+    input.parentNode.appendChild(err);
+  }
+
+  function clearFieldErrors(form) {
+    if (!form || !form.querySelectorAll) return;
+    Array.prototype.forEach.call(form.querySelectorAll('.field-error'), function (el) {
+      el.classList.remove('field-error');
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('.form-error'), function (el) {
+      el.remove();
+    });
+  }
+
+  function setBusy(btn, busy, busyLabel, idleLabel) {
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.classList.toggle('is-loading', busy);
+    btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+    var label = btn.querySelector ? btn.querySelector('.btn-label') : null;
+    if (label) label.textContent = busy ? busyLabel : idleLabel;
+    else btn.textContent = busy ? busyLabel : idleLabel;
   }
 
   /**
-   * Renders Auth View in 'login' or 'register' mode, rendering banner if reason=interact
+   * Show the view in 'login' or 'register' mode, with the reason banner when
+   * the visitor was sent here from a gated action.
    */
   function renderAuthView(mode) {
     mode = mode === 'register' ? 'register' : 'login';
 
-    if (typeof document === 'undefined') {
-      return { mode: mode };
-    }
+    if (typeof document === 'undefined') return { mode: mode };
 
     var loginForm = document.getElementById('login-form');
     var registerForm = document.getElementById('register-form');
@@ -52,15 +86,14 @@
     var currentHash = typeof window !== 'undefined' ? window.location.hash : '';
     var params = parseQueryParams(currentHash);
 
-    // Reason Banner for Gated Interaction
     if (banner) {
       if (params.reason === 'interact') {
         banner.style.display = 'flex';
         banner.innerHTML = [
-          '<span class="auth-banner-icon" aria-hidden="true">✨</span>',
+          '<span class="auth-banner-icon" aria-hidden="true">' + icon('sparkle', { size: 16 }) + '</span>',
           '<div class="auth-banner-text">',
           '  <strong>Create an account or sign in to like, comment, and connect.</strong>',
-          '</div>'
+          '</div>',
         ].join('');
       } else {
         banner.style.display = 'none';
@@ -68,47 +101,62 @@
       }
     }
 
-    // Toggle Forms
     if (mode === 'register') {
       if (loginForm) loginForm.style.display = 'none';
       if (registerForm) registerForm.style.display = 'block';
       if (heading) heading.textContent = 'Join CodeAlpha';
-      if (subtitle) subtitle.textContent = 'Connect and share with developers and creators worldwide';
+      if (subtitle) subtitle.textContent = 'Create your account and start sharing.';
     } else {
       if (loginForm) loginForm.style.display = 'block';
       if (registerForm) registerForm.style.display = 'none';
       if (heading) heading.textContent = 'Welcome Back';
-      if (subtitle) subtitle.textContent = 'Sign in to access your feed and connections';
+      if (subtitle) subtitle.textContent = 'Sign in to post, reply, and follow people.';
     }
 
-    // Preserve query parameters when switching between login and register tabs
+    // Keep the mode switcher on the same destination the visitor came from.
     var qString = '';
     var qIndex = currentHash.indexOf('?');
-    if (qIndex !== -1) {
-      qString = currentHash.substring(qIndex);
-    }
+    if (qIndex !== -1) qString = currentHash.substring(qIndex);
 
-    if (switchToRegister) {
-      switchToRegister.setAttribute('href', '#register' + qString);
-    }
-    if (switchToLogin) {
-      switchToLogin.setAttribute('href', '#login' + qString);
-    }
+    if (switchToRegister) switchToRegister.setAttribute('href', '#register' + qString);
+    if (switchToLogin) switchToLogin.setAttribute('href', '#login' + qString);
   }
 
-  /**
-   * Initializes Auth Forms Submission Handlers
-   */
+  function persistSession(res) {
+    var token = res && res.data && res.data.token;
+    var user = res && res.data && res.data.user;
+    if (!token || !user) return null;
+
+    global.api.setToken(token);
+    try {
+      localStorage.setItem('user', JSON.stringify(user));
+    } catch (e) {}
+
+    if (global.app && typeof global.app.updateAuthUI === 'function') global.app.updateAuthUI();
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('auth:change', { detail: { user: user } }));
+    }
+    return user;
+  }
+
+  function goToRedirectTarget() {
+    var params = parseQueryParams(typeof window !== 'undefined' ? window.location.hash : '');
+    var target = getRedirectTarget(params);
+    if (global.router && typeof global.router.navigate === 'function') global.router.navigate(target);
+    else if (typeof window !== 'undefined') window.location.hash = target;
+  }
+
   function initAuthForms() {
     if (typeof document === 'undefined') return;
 
     var loginForm = document.getElementById('login-form');
     var registerForm = document.getElementById('register-form');
 
-    // --- Login Form Handler ---
+    // --- Log in ---------------------------------------------------------------
     if (loginForm) {
       loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
+        clearFieldErrors(loginForm);
 
         var emailInput = document.getElementById('login-email');
         var passwordInput = document.getElementById('login-password');
@@ -117,69 +165,40 @@
         var login = emailInput ? emailInput.value.trim() : '';
         var password = passwordInput ? passwordInput.value : '';
 
-        if (!login || !password) {
-          if (global.showToast) global.showToast('Please enter your login and password', 'error');
+        if (!login) {
+          setFieldError(emailInput, 'Enter your email or username.');
+          if (emailInput) emailInput.focus();
+          return;
+        }
+        if (!password) {
+          setFieldError(passwordInput, 'Enter your password.');
+          if (passwordInput) passwordInput.focus();
           return;
         }
 
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Logging in...';
-        }
+        setBusy(submitBtn, true, 'Logging in…', 'Log in');
 
         global.api.post('/auth/login', { login: login, password: password })
           .then(function (res) {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Log in';
-            }
-
-            var token = res && res.data && res.data.token;
-            var user = res && res.data && res.data.user;
-
-            if (token && user) {
-              global.api.setToken(token);
-              localStorage.setItem('user', JSON.stringify(user));
-
-              if (global.app && typeof global.app.updateAuthUI === 'function') {
-                global.app.updateAuthUI();
-              }
-
-              if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                window.dispatchEvent(new CustomEvent('auth:change', { detail: { user: user } }));
-              }
-
-              if (global.showToast) {
-                global.showToast('Welcome back, ' + user.username + '!', 'success');
-              }
-
-              // Return redirection
-              var params = parseQueryParams(window.location.hash);
-              var target = getRedirectTarget(params);
-
-              if (global.router && typeof global.router.navigate === 'function') {
-                global.router.navigate(target);
-              } else {
-                window.location.hash = target;
-              }
-            }
+            setBusy(submitBtn, false, 'Logging in…', 'Log in');
+            var user = persistSession(res);
+            if (user && global.showToast) global.showToast('Signed in as ' + user.username + '.', 'success');
+            if (user) goToRedirectTarget();
           })
           .catch(function (err) {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Log in';
-            }
+            setBusy(submitBtn, false, 'Logging in…', 'Log in');
             if (global.showToast) {
-              global.showToast(err.message || 'Login failed. Please check credentials.', 'error');
+              global.showToast(err.message || 'That email or password didn\'t match. Try again.', 'error');
             }
           });
       });
     }
 
-    // --- Register Form Handler ---
+    // --- Register -------------------------------------------------------------
     if (registerForm) {
       registerForm.addEventListener('submit', function (e) {
         e.preventDefault();
+        clearFieldErrors(registerForm);
 
         var usernameInput = document.getElementById('register-username');
         var emailInput = document.getElementById('register-email');
@@ -190,70 +209,45 @@
         var email = emailInput ? emailInput.value.trim() : '';
         var password = passwordInput ? passwordInput.value : '';
 
-        if (!username || !email || !password) {
-          if (global.showToast) global.showToast('All fields are required', 'error');
+        if (!username) {
+          setFieldError(usernameInput, 'Pick a username.');
+          if (usernameInput) usernameInput.focus();
           return;
         }
-
         if (username.length < 3) {
-          if (global.showToast) global.showToast('Username must be at least 3 characters', 'error');
+          setFieldError(usernameInput, 'Usernames need at least 3 characters.');
+          if (usernameInput) usernameInput.focus();
           return;
         }
-
+        if (!email) {
+          setFieldError(emailInput, 'Enter your email address.');
+          if (emailInput) emailInput.focus();
+          return;
+        }
+        if (!password) {
+          setFieldError(passwordInput, 'Choose a password.');
+          if (passwordInput) passwordInput.focus();
+          return;
+        }
         if (password.length < 6) {
-          if (global.showToast) global.showToast('Password must be at least 6 characters', 'error');
+          setFieldError(passwordInput, 'Passwords need at least 6 characters.');
+          if (passwordInput) passwordInput.focus();
           return;
         }
 
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Creating account...';
-        }
+        setBusy(submitBtn, true, 'Creating account…', 'Create account');
 
         global.api.post('/auth/register', { username: username, email: email, password: password })
           .then(function (res) {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Create Account';
-            }
-
-            var token = res && res.data && res.data.token;
-            var user = res && res.data && res.data.user;
-
-            if (token && user) {
-              global.api.setToken(token);
-              localStorage.setItem('user', JSON.stringify(user));
-
-              if (global.app && typeof global.app.updateAuthUI === 'function') {
-                global.app.updateAuthUI();
-              }
-
-              if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                window.dispatchEvent(new CustomEvent('auth:change', { detail: { user: user } }));
-              }
-
-              if (global.showToast) {
-                global.showToast('Account created! Welcome to CodeAlpha, ' + user.username + '!', 'success');
-              }
-
-              // Return redirection
-              var params = parseQueryParams(window.location.hash);
-              var target = getRedirectTarget(params);
-
-              if (global.router && typeof global.router.navigate === 'function') {
-                global.router.navigate(target);
-              } else {
-                window.location.hash = target;
-              }
-            }
+            setBusy(submitBtn, false, 'Creating account…', 'Create account');
+            var user = persistSession(res);
+            if (user && global.showToast) global.showToast('Welcome to CodeAlpha, ' + user.username + '.', 'success');
+            if (user) goToRedirectTarget();
           })
           .catch(function (err) {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Create Account';
-            }
+            setBusy(submitBtn, false, 'Creating account…', 'Create account');
             if (global.showToast) {
-              global.showToast(err.message || 'Registration failed', 'error');
+              global.showToast(err.message || 'We couldn\'t create that account. Try again.', 'error');
             }
           });
       });

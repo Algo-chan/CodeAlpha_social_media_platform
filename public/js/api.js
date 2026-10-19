@@ -1,7 +1,7 @@
 /**
- * Social Media Platform API Client
- * Wraps Fetch API, automatically attaches Bearer tokens, handles JSON & FormData,
- * parses standardized backend error responses, and dispatches toasts.
+ * API client
+ * Wraps fetch, attaches the bearer token, serialises JSON and FormData,
+ * normalises backend errors, and surfaces a toast for user-facing failures.
  */
 (function (global) {
   'use strict';
@@ -10,60 +10,107 @@
   var TOKEN_KEY = 'auth_token';
   var USER_KEY = 'user';
 
+  var TOAST_DURATION = 4000;
+
+  function iconMarkup(type) {
+    var name = type === 'success' ? 'check' : type === 'error' ? 'alert-circle' : 'info';
+    if (global.icons && global.icons.svg) {
+      return global.icons.svg(name, { size: 16 });
+    }
+    return '';
+  }
+
   /**
-   * Display toast notification
-   * @param {string} message 
-   * @param {'info'|'success'|'error'} [type='info'] 
-   * @param {number} [duration=3500] 
+   * Show a toast. Enter/leave run through CSS transitions so a rapid second
+   * toast retargets smoothly instead of restarting a keyframe animation.
+   * The dismiss timer pauses while the pointer or focus is inside the toast.
+   *
+   * @param {string} message
+   * @param {'info'|'success'|'error'} [type='info']
+   * @param {number} [duration]
    */
   function showToast(message, type, duration) {
-    type = type || 'info';
-    duration = duration !== undefined ? duration : 3500;
+    type = type === 'success' || type === 'error' ? type : 'info';
+    duration = duration !== undefined ? duration : TOAST_DURATION;
 
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined') return null;
 
     var container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'toast-container';
-      container.setAttribute('aria-live', 'polite');
+      container.className = '';
       document.body.appendChild(container);
     }
 
     var toast = document.createElement('div');
-    toast.className = 'toast toast-' + type;
-    toast.setAttribute('role', 'alert');
+    toast.className = 'toast toast-' + type + ' is-entering';
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
-    var msgSpan = document.createElement('span');
-    msgSpan.className = 'toast-message';
-    msgSpan.textContent = message;
+    var icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.innerHTML = iconMarkup(type);
+
+    var body = document.createElement('div');
+    body.className = 'toast-body';
+
+    var msg = document.createElement('span');
+    msg.className = 'toast-message';
+    msg.textContent = message;
+    body.appendChild(msg);
 
     var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
     closeBtn.className = 'toast-close';
-    closeBtn.setAttribute('aria-label', 'Close toast');
-    closeBtn.innerHTML = '&times;';
-    closeBtn.onclick = function () {
-      removeToast(toast);
-    };
+    closeBtn.setAttribute('aria-label', 'Dismiss notification');
+    closeBtn.innerHTML =
+      global.icons && global.icons.svg ? global.icons.svg('close', { size: 13 }) : '&times;';
 
-    toast.appendChild(msgSpan);
+    toast.appendChild(icon);
+    toast.appendChild(body);
     toast.appendChild(closeBtn);
     container.appendChild(toast);
 
-    var timer = setTimeout(function () {
-      removeToast(toast);
-    }, duration);
+    // Trigger the enter transition on the next frame.
+    requestAnimationFrame(function () {
+      toast.classList.remove('is-entering');
+    });
 
-    function removeToast(el) {
+    var timer = null;
+    var removed = false;
+
+    function startTimer() {
+      if (duration <= 0) return;
       clearTimeout(timer);
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(10px)';
-      setTimeout(function () {
-        if (el.parentNode) {
-          el.parentNode.removeChild(el);
-        }
-      }, 200);
+      timer = setTimeout(removeToast, duration);
     }
+
+    function pauseTimer() {
+      clearTimeout(timer);
+    }
+
+    // A person reading a long error should not have it vanish under them.
+    toast.addEventListener('mouseenter', pauseTimer);
+    toast.addEventListener('mouseleave', startTimer);
+    toast.addEventListener('focusin', pauseTimer);
+    toast.addEventListener('focusout', startTimer);
+
+    function removeToast() {
+      if (removed) return;
+      removed = true;
+      clearTimeout(timer);
+      toast.classList.add('is-leaving');
+      var done = function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      };
+      toast.addEventListener('transitionend', done, { once: true });
+      setTimeout(done, 400); // fallback if the transition never fires
+    }
+
+    closeBtn.addEventListener('click', removeToast);
+    startTimer();
+
+    return { dismiss: removeToast, element: toast };
   }
 
   function getToken() {
@@ -76,11 +123,24 @@
 
   function setToken(token) {
     try {
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      } else {
-        localStorage.removeItem(TOKEN_KEY);
-      }
+      if (token) localStorage.setItem(TOKEN_KEY, token);
+      else localStorage.removeItem(TOKEN_KEY);
+    } catch (e) {}
+  }
+
+  function getUser() {
+    try {
+      var raw = localStorage.getItem(USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setUser(user) {
+    try {
+      if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+      else localStorage.removeItem(USER_KEY);
     } catch (e) {}
   }
 
@@ -96,39 +156,31 @@
     }
   }
 
-  /**
-   * Main request handler
-   */
   async function request(endpoint, options) {
     options = options || {};
     var method = (options.method || 'GET').toUpperCase();
     var headers = Object.assign({}, options.headers || {});
     var body = options.body;
-    var isFormData = options.isFormData || (typeof FormData !== 'undefined' && body instanceof FormData);
+    var isFormData =
+      options.isFormData || (typeof FormData !== 'undefined' && body instanceof FormData);
 
-    // Format URL
-    var url = endpoint.startsWith('http') ? endpoint : API_BASE_URL + (endpoint.startsWith('/') ? endpoint : '/' + endpoint);
+    var url = endpoint.startsWith('http')
+      ? endpoint
+      : API_BASE_URL + (endpoint.startsWith('/') ? endpoint : '/' + endpoint);
 
-    // Injects Authorization header if available
     var token = getToken();
     if (token && !headers['Authorization']) {
       headers['Authorization'] = 'Bearer ' + token;
     }
 
-    var fetchConfig = {
-      method: method,
-      headers: headers,
-    };
+    var fetchConfig = { method: method, headers: headers };
 
     if (body !== undefined && body !== null) {
       if (isFormData) {
-        // Let the browser set Content-Type with multipart boundary
         delete headers['Content-Type'];
         fetchConfig.body = body;
       } else if (typeof body === 'object') {
-        if (!headers['Content-Type']) {
-          headers['Content-Type'] = 'application/json';
-        }
+        if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
         fetchConfig.body = JSON.stringify(body);
       } else {
         fetchConfig.body = body;
@@ -139,46 +191,36 @@
     try {
       response = await fetch(url, fetchConfig);
     } catch (networkErr) {
-      var err = new Error(networkErr.message || 'Network connection failed');
-      err.status = 0;
-      err.code = 'NETWORK_ERROR';
-      if (!options.suppressToast) {
-        showToast('Network error: Unable to reach the server', 'error');
-      }
-      throw err;
+      var netErr = new Error('Could not reach the server. Check your connection and try again.');
+      netErr.status = 0;
+      netErr.code = 'NETWORK_ERROR';
+      netErr.cause = networkErr;
+      if (!options.suppressToast) showToast(netErr.message, 'error');
+      throw netErr;
     }
 
-    // Handle 401 Unauthorized
-    if (response.status === 401) {
-      clearAuth();
-    }
+    if (response.status === 401) clearAuth();
+    if (response.status === 204) return null;
 
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return null;
-    }
-
-    // Parse JSON
     var data;
     var contentType = response.headers ? response.headers.get('content-type') : null;
     if (contentType && contentType.includes('application/json')) {
       try {
         data = await response.json();
-      } catch (parseErr) {
+      } catch (e) {
         data = null;
       }
     } else {
-      var textData = await response.text();
+      var text = await response.text();
       try {
-        data = JSON.parse(textData);
+        data = JSON.parse(text);
       } catch (e) {
-        data = { message: textData };
+        data = { message: text };
       }
     }
 
-    // Check HTTP status code
     if (!response.ok) {
-      var errorMessage = 'Request failed';
+      var errorMessage = 'Something went wrong. Please try again.';
       var errorCode = 'API_ERROR';
 
       if (data && data.error) {
@@ -193,28 +235,22 @@
       error.code = errorCode;
       error.data = data;
 
-      if (!options.suppressToast) {
-        showToast(errorMessage, 'error');
-      }
+      if (!options.suppressToast) showToast(errorMessage, 'error');
       throw error;
     }
 
     return data;
   }
 
-  // HTTP Helper methods
   function get(endpoint, options) {
     return request(endpoint, Object.assign({}, options, { method: 'GET' }));
   }
-
   function post(endpoint, body, isFormData, options) {
     return request(endpoint, Object.assign({}, options, { method: 'POST', body: body, isFormData: isFormData }));
   }
-
   function put(endpoint, body, isFormData, options) {
     return request(endpoint, Object.assign({}, options, { method: 'PUT', body: body, isFormData: isFormData }));
   }
-
   function del(endpoint, options) {
     return request(endpoint, Object.assign({}, options, { method: 'DELETE' }));
   }
@@ -227,6 +263,8 @@
     delete: del,
     getToken: getToken,
     setToken: setToken,
+    getUser: getUser,
+    setUser: setUser,
     clearAuth: clearAuth,
     showToast: showToast,
     API_BASE_URL: API_BASE_URL,

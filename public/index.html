@@ -1,163 +1,173 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Adaptive Modern Slate - High contrast, responsive social media platform">
-  <title>CodeAlpha Social Media</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="description" content="CodeAlpha — a small social feed for sharing posts, images, and ideas.">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0f14">
+  <title>CodeAlpha Social</title>
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/css/variables.css">
   <link rel="stylesheet" href="/css/style.css">
 
-  <!-- Immediate Theme Initializer to prevent FOIT/FOUC -->
+  <!-- Theme applied before first paint to avoid a flash of the wrong theme -->
   <script src="/js/theme.js"></script>
 </head>
 <body>
-  <!-- Sticky Top Navigation Bar (56px) -->
+  <a href="#main-content" class="visually-hidden">Skip to content</a>
+
   <header class="navbar" role="banner">
     <div class="nav-container">
       <div class="nav-left">
-        <a href="#explore" class="brand-logo" aria-label="CodeAlpha Social Home">
-          <span class="brand-icon">α</span>
-          <span>CodeAlpha</span>
+        <a href="#explore" class="brand-logo" aria-label="CodeAlpha — home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">CodeAlpha</span>
         </a>
 
-        <nav class="nav-links" aria-label="Main Navigation">
+        <nav class="nav-links" aria-label="Main">
           <a href="#explore" class="nav-link" id="nav-link-explore">
-            <span>Explore</span>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>
+            <span class="nav-label">Explore</span>
           </a>
           <a href="#following" class="nav-link" id="nav-link-following">
-            <span>Following</span>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3.2"/><path d="M17 11l2 2 3.5-3.5"/></svg>
+            <span class="nav-label">Following</span>
           </a>
         </nav>
       </div>
 
       <div class="nav-right">
-        <!-- Theme Toggle Button -->
-        <button id="theme-toggle-btn" class="btn-icon theme-toggle-btn" type="button" aria-label="Toggle light and dark theme" title="Toggle theme">
-          <span class="theme-icon" aria-hidden="true">🌙</span>
+        <button id="theme-toggle-btn" class="btn-icon theme-toggle-btn" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">
+          <span class="theme-icon" aria-hidden="true">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+          </span>
         </button>
 
-        <!-- Unauthenticated Auth Actions -->
+        <!-- Signed out -->
         <div id="nav-auth-logged-out" class="nav-auth">
-          <a href="#login" class="btn btn-outline btn-sm" id="nav-login-btn">Log in</a>
+          <a href="#login" class="btn btn-ghost btn-sm" id="nav-login-btn">Log in</a>
           <a href="#register" class="btn btn-primary btn-sm" id="nav-register-btn">Sign up</a>
         </div>
 
-        <!-- Authenticated Auth Actions -->
-        <div id="nav-auth-logged-in" class="nav-auth" style="display: none;">
-          <a href="#profile" id="nav-user-profile-link" class="nav-user-profile" title="View Profile">
+        <!-- Signed in -->
+        <div id="nav-auth-logged-in" class="nav-auth" hidden>
+          <a href="#profile" id="nav-user-profile-link" class="nav-user-profile" title="Your profile">
             <span id="nav-user-avatar">
               <span class="avatar-initials">U</span>
             </span>
             <span id="nav-user-name" class="nav-user-name">User</span>
           </a>
-          <button id="nav-logout-btn" class="btn btn-outline btn-sm" type="button">Log out</button>
+          <button id="nav-logout-btn" class="btn-icon" type="button" aria-label="Log out" title="Log out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          </button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Feed & Dynamic View Container (Max 640px) -->
   <main class="main-container" id="main-content" role="main">
 
-    <!-- View: Feed (#explore, #following, #feed) -->
+    <!-- View: Feed -->
     <section id="view-feed" class="view active" aria-labelledby="feed-heading">
-      <h1 id="feed-heading" class="visually-hidden" style="display:none;">Social Feed</h1>
+      <h1 id="feed-heading" class="visually-hidden">Feed</h1>
 
-      <!-- Feed Category Tabs -->
-      <nav class="feed-tabs" aria-label="Feed Tabs">
-        <button id="tab-explore" class="tab-btn active" data-tab="explore" type="button">Explore</button>
-        <button id="tab-following" class="tab-btn" data-tab="following" type="button">Following</button>
+      <nav class="feed-tabs" role="tablist" aria-label="Feed">
+        <button id="tab-explore" class="tab-btn" data-tab="explore" type="button" role="tab" aria-selected="true" aria-controls="feed-posts-container">Explore</button>
+        <button id="tab-following" class="tab-btn" data-tab="following" type="button" role="tab" aria-selected="false" aria-controls="feed-posts-container">Following</button>
       </nav>
 
-      <!-- Post Creation Card Container -->
-      <section id="create-post-container" class="create-post-card" aria-label="Create a post">
-        <h2 class="create-post-header">Share your thoughts</h2>
-        <form id="create-post-form">
+      <section id="create-post-container" class="create-post-card" aria-labelledby="composer-heading">
+        <h2 id="composer-heading" class="create-post-header">Write a post</h2>
+        <form id="create-post-form" novalidate>
+          <label for="post-content-input" class="visually-hidden">Post text</label>
           <textarea
             id="post-content-input"
             class="create-post-textarea"
-            placeholder="What's happening? (Max 500 characters)"
+            placeholder="What do you want to share?"
             maxlength="500"
             rows="3"
-            aria-label="Post content"
+            aria-describedby="post-char-counter"
           ></textarea>
-          <!-- Media Thumbnail Preview Container -->
-          <div id="post-media-preview-container" class="media-preview-container" style="display: none;">
-            <img id="post-media-preview" class="media-preview" alt="Attachment preview">
-            <button type="button" id="btn-remove-media" class="btn-remove-media" aria-label="Remove image">&times;</button>
+
+          <div id="post-media-preview-container" class="media-preview-container" hidden>
+            <img id="post-media-preview" class="media-preview" alt="Selected image preview">
+            <button type="button" id="btn-remove-media" class="btn-remove-media" aria-label="Remove image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="width:13px;height:13px"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
           </div>
+
           <div class="create-post-footer">
             <div class="file-input-wrapper">
               <label for="post-media-input" class="btn btn-secondary btn-sm">
-                <span>📷 Add Media</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.6" cy="9.4" r="1.6"/><path d="M21 16.5l-4.6-4.3L7 20"/></svg>
+                <span>Add image</span>
               </label>
               <input type="file" id="post-media-input" accept="image/jpeg,image/png,image/webp,image/gif">
-              <span id="post-media-filename" class="form-helper"></span>
+              <span id="post-media-filename" class="form-helper form-helper-filename"></span>
             </div>
             <div class="create-post-actions-right">
-              <span id="post-char-counter" class="char-counter">0 / 500</span>
-              <button type="submit" class="btn btn-primary" id="btn-submit-post">Post</button>
+              <span id="post-char-counter" class="char-counter" aria-live="polite">500</span>
+              <button type="submit" class="btn btn-primary" id="btn-submit-post">
+                <span class="btn-label">Post</span>
+              </button>
             </div>
           </div>
         </form>
       </section>
 
-      <!-- Posts Stream Container -->
-      <div id="feed-posts-container" class="posts-stream">
-        <div class="empty-state">
-          <div class="empty-state-icon">📰</div>
-          <h3 class="empty-state-title">Welcome to the Feed</h3>
-          <p class="empty-state-desc">Posts from creators and the community will appear here.</p>
-        </div>
-      </div>
+      <div id="feed-posts-container" class="posts-stream" role="tabpanel" aria-live="polite" aria-busy="false"></div>
     </section>
 
-    <!-- View: Authentication (#login, #register) -->
+    <!-- View: Authentication -->
     <section id="view-auth" class="view" aria-labelledby="auth-heading">
       <div class="form-card">
-        <h1 id="auth-heading" class="form-title">Join CodeAlpha</h1>
-        <p id="auth-subtitle" class="form-subtitle">Connect and share with developers worldwide</p>
+        <div class="form-header">
+          <h1 id="auth-heading" class="form-title">Welcome Back</h1>
+          <p id="auth-subtitle" class="form-subtitle">Sign in to post, reply, and follow people.</p>
+        </div>
 
-        <!-- Prominent Friendly Reason Banner for Gated Interaction Interceptor -->
-        <div id="auth-banner" class="auth-banner" style="display: none;"></div>
+        <div id="auth-banner" class="auth-banner" hidden></div>
 
-        <!-- Dynamic Auth Form Container -->
         <div id="auth-forms-container">
-          <!-- Login Form -->
-          <form id="login-form">
+          <form id="login-form" novalidate>
             <div class="form-group">
-              <label for="login-email" class="form-label">Email or Username</label>
-              <input type="text" id="login-email" class="form-input" autocomplete="username" required>
+              <label for="login-email" class="form-label">Email or username</label>
+              <input type="text" id="login-email" class="form-input" autocomplete="username" autocapitalize="none" spellcheck="false" required>
             </div>
             <div class="form-group">
               <label for="login-password" class="form-label">Password</label>
               <input type="password" id="login-password" class="form-input" autocomplete="current-password" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit">Log in</button>
-            <p class="form-helper" style="text-align: center; margin-top: 1rem;">
-              Don't have an account? <a href="#register" id="switch-to-register">Sign up</a>
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-login-submit">
+              <span class="btn-label">Log in</span>
+            </button>
+            <p class="form-switch">
+              New here? <a href="#register" id="switch-to-register">Create an account</a>
             </p>
           </form>
 
-          <!-- Register Form -->
-          <form id="register-form" style="display: none;">
+          <form id="register-form" novalidate hidden>
             <div class="form-group">
               <label for="register-username" class="form-label">Username</label>
-              <input type="text" id="register-username" class="form-input" autocomplete="username" required minlength="3" maxlength="30">
+              <input type="text" id="register-username" class="form-input" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="30" aria-describedby="register-username-hint">
+              <span id="register-username-hint" class="form-helper form-helper-block">3–30 characters. Letters, numbers, and underscores.</span>
             </div>
             <div class="form-group">
-              <label for="register-email" class="form-label">Email Address</label>
-              <input type="email" id="register-email" class="form-input" autocomplete="email" required>
+              <label for="register-email" class="form-label">Email</label>
+              <input type="email" id="register-email" class="form-input" autocomplete="email" autocapitalize="none" spellcheck="false" required>
             </div>
             <div class="form-group">
               <label for="register-password" class="form-label">Password</label>
-              <input type="password" id="register-password" class="form-input" autocomplete="new-password" required minlength="6">
+              <input type="password" id="register-password" class="form-input" autocomplete="new-password" required minlength="6" aria-describedby="register-password-hint">
+              <span id="register-password-hint" class="form-helper form-helper-block">At least 6 characters.</span>
             </div>
-            <button type="submit" class="btn btn-primary btn-block" id="btn-register-submit">Create Account</button>
-            <p class="form-helper" style="text-align: center; margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-register-submit">
+              <span class="btn-label">Create account</span>
+            </button>
+            <p class="form-switch">
               Already have an account? <a href="#login" id="switch-to-login">Log in</a>
             </p>
           </form>
@@ -165,7 +175,7 @@
       </div>
     </section>
 
-    <!-- View: Profile (#profile/:username) -->
+    <!-- View: Profile -->
     <section id="view-profile" class="view" aria-labelledby="profile-heading">
       <div id="profile-container" class="profile-card">
         <div class="profile-header">
@@ -173,52 +183,43 @@
             <div id="profile-avatar" class="profile-avatar-wrapper">
               <span class="avatar-initials profile-avatar-large">U</span>
             </div>
-            <div>
-              <h1 id="profile-heading" class="profile-username" style="font-size: var(--font-title); font-weight: var(--font-weight-bold);">User Profile</h1>
+            <div class="profile-identity">
+              <h1 id="profile-heading" class="profile-username">Profile</h1>
               <p id="profile-handle" class="post-author-handle">@username</p>
-              <p id="profile-bio" class="profile-bio">No bio provided yet.</p>
+              <p id="profile-bio" class="profile-bio"></p>
               <p id="profile-joined-date" class="profile-joined-date"></p>
             </div>
           </div>
-          <div id="profile-action-container">
-            <button id="btn-follow-toggle" class="btn btn-outline btn-sm" type="button">Follow</button>
-          </div>
+          <div id="profile-action-container" class="profile-action-container"></div>
         </div>
 
-        <div id="profile-edit-container" class="profile-edit-container" style="display: none;"></div>
+        <div id="profile-edit-container" class="profile-edit-container" hidden></div>
 
         <div class="profile-stats">
           <div class="stat-item">
             <span id="stat-posts-count" class="stat-number">0</span>
-            <span class="stat-label">Posts</span>
+            <span class="stat-label" id="stat-posts-label">Posts</span>
           </div>
           <div class="stat-item">
             <span id="stat-followers-count" class="stat-number">0</span>
-            <span class="stat-label">Followers</span>
+            <span class="stat-label" id="stat-followers-label">Followers</span>
           </div>
           <div class="stat-item">
             <span id="stat-following-count" class="stat-number">0</span>
-            <span class="stat-label">Following</span>
+            <span class="stat-label" id="stat-following-label">Following</span>
           </div>
         </div>
       </div>
 
-      <!-- User's Posts Feed Container -->
-      <div id="profile-posts-container" class="posts-stream">
-        <div class="empty-state">
-          <div class="empty-state-icon">✍️</div>
-          <h3 class="empty-state-title">No posts yet</h3>
-          <p class="empty-state-desc">This user hasn't posted anything yet.</p>
-        </div>
-      </div>
+      <h2 class="profile-posts-heading">Posts</h2>
+      <div id="profile-posts-container" class="posts-stream" aria-live="polite" aria-busy="false"></div>
     </section>
 
   </main>
 
-  <!-- Accessible Toast Notifications Container -->
-  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast-container" role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false"></div>
 
-  <!-- Client Script Modules -->
+  <script src="/js/icons.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/router.js"></script>
   <script src="/js/components/postCard.js"></script>

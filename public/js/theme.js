@@ -37,10 +37,21 @@
       var isDark = theme === 'dark';
       btn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
       btn.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
-      var icon = btn.querySelector('.theme-icon');
-      if (icon) {
-        icon.textContent = isDark ? '☀️' : '🌙';
+      var moon = btn.querySelector('.icon-moon');
+      var sun = btn.querySelector('.icon-sun');
+      if (moon && sun) {
+        // Show the icon for the mode a click will take you to.
+        moon.style.display = isDark ? 'none' : 'block';
+        sun.style.display = isDark ? 'block' : 'none';
       }
+      // Keep the browser chrome in step with the app theme.
+      var meta = document.querySelector('meta[name="theme-color"]:not([media])');
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('name', 'theme-color');
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', isDark ? '#0d0f14' : '#ffffff');
     });
   }
 

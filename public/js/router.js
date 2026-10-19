@@ -1,6 +1,8 @@
 /**
- * Client-Side Hash Router
- * Manages view toggling for #feed, #explore, #following, #login, #register, #profile/:username
+ * Hash router
+ * Maps #explore, #following, #login, #register and #profile/:username to a
+ * view container. Views are toggled with the `hidden` attribute rather than
+ * inline display so the stylesheet stays in charge of presentation.
  */
 (function (global) {
   'use strict';
@@ -8,72 +10,68 @@
   var routes = [];
   var currentRoute = null;
 
-  /**
-   * Register a route pattern and handler
-   * @param {string} pattern - e.g. '#explore', '#profile/:username'
-   * @param {Function} handler - callback({ route, params, hash })
-   */
   function addRoute(pattern, handler) {
     var paramNames = [];
-    var regexPattern = pattern
-      .replace(/:([a-zA-Z0-9_]+)/g, function (_, paramName) {
-        paramNames.push(paramName);
-        return '([^/]+)';
-      });
-    
-    var regex = new RegExp('^' + regexPattern + '$');
+    var regexPattern = pattern.replace(/:([a-zA-Z0-9_]+)/g, function (_, paramName) {
+      paramNames.push(paramName);
+      return '([^/]+)';
+    });
+
     routes.push({
       pattern: pattern,
-      regex: regex,
+      regex: new RegExp('^' + regexPattern + '$'),
       paramNames: paramNames,
       handler: handler,
     });
   }
 
   function parseHash(hash) {
-    if (!hash || hash === '' || hash === '#') {
-      return '#explore';
-    }
+    if (!hash || hash === '' || hash === '#') return '#explore';
     return hash;
   }
 
   function setActiveView(viewId) {
     if (typeof document === 'undefined') return;
     var views = document.querySelectorAll('.view');
-    views.forEach(function (view) {
-      if (view.id === viewId) {
-        view.classList.add('active');
-      } else {
-        view.classList.remove('active');
-      }
+    Array.prototype.forEach.call(views, function (view) {
+      var isActive = view.id === viewId;
+      view.classList.toggle('active', isActive);
+      view.hidden = !isActive;
     });
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }
+
+  function isActivelyOn(hash, href) {
+    return hash === href || (hash === '#feed' && href === '#explore');
   }
 
   function updateActiveNavLink(hash) {
     if (typeof document === 'undefined') return;
     var baseHash = hash.split('?')[0];
-    var navLinks = document.querySelectorAll('.nav-link');
-    navLinks.forEach(function (link) {
-      var href = link.getAttribute('href');
-      if (href === baseHash || (baseHash === '#feed' && href === '#explore')) {
-        link.classList.add('active');
-      } else {
-        link.classList.remove('active');
-      }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.nav-link'), function (link) {
+      var active = isActivelyOn(baseHash, link.getAttribute('href'));
+      link.classList.toggle('active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
     });
 
-    // Also update feed tabs if on feed view
-    var feedTabs = document.querySelectorAll('.tab-btn');
-    feedTabs.forEach(function (tab) {
-      var tabTarget = tab.getAttribute('data-tab');
-      if ((baseHash === '#explore' || baseHash === '#feed') && tabTarget === 'explore') {
-        tab.classList.add('active');
-      } else if (baseHash === '#following' && tabTarget === 'following') {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
+    Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (tab) {
+      var target = tab.getAttribute('data-tab');
+      var selected =
+        (target === 'explore' && (baseHash === '#explore' || baseHash === '#feed')) ||
+        (target === 'following' && baseHash === '#following');
+      tab.classList.toggle('active', selected);
+      tab.setAttribute('aria-selected', selected ? 'true' : 'false');
     });
+  }
+
+  function setVisible(el, visible) {
+    if (!el) return;
+    el.hidden = !visible;
+    el.style.display = visible ? '' : 'none';
   }
 
   function updateAuthForms(mode) {
@@ -83,13 +81,13 @@
     var heading = document.getElementById('auth-heading');
 
     if (mode === 'register') {
-      if (loginForm) loginForm.style.display = 'none';
-      if (registerForm) registerForm.style.display = 'block';
-      if (heading) heading.textContent = 'Join CodeAlpha';
+      setVisible(loginForm, false);
+      setVisible(registerForm, true);
+      if (heading) heading.textContent = 'Create your account';
     } else {
-      if (loginForm) loginForm.style.display = 'block';
-      if (registerForm) registerForm.style.display = 'none';
-      if (heading) heading.textContent = 'Welcome Back';
+      setVisible(loginForm, true);
+      setVisible(registerForm, false);
+      if (heading) heading.textContent = 'Welcome back';
     }
   }
 
@@ -97,7 +95,6 @@
     var fullHash = typeof window !== 'undefined' ? window.location.hash : '';
     var hash = parseHash(fullHash);
 
-    // If initial hash was empty, update url
     if (typeof window !== 'undefined' && (!window.location.hash || window.location.hash === '#')) {
       window.location.hash = hash;
       return;
@@ -124,19 +121,18 @@
 
         matched = true;
         updateActiveNavLink(cleanHash);
-
-        if (typeof route.handler === 'function') {
-          route.handler(currentRoute);
-        }
+        if (typeof route.handler === 'function') route.handler(currentRoute);
         break;
       }
     }
 
-    // Default fallback handling if no route explicitly matched
     if (!matched) {
       if (cleanHash.startsWith('#profile/')) {
-        var username = cleanHash.replace('#profile/', '');
-        currentRoute = { pattern: '#profile/:username', hash: cleanHash, params: { username: username } };
+        currentRoute = {
+          pattern: '#profile/:username',
+          hash: cleanHash,
+          params: { username: cleanHash.replace('#profile/', '') },
+        };
         setActiveView('view-profile');
       } else if (cleanHash === '#login') {
         currentRoute = { pattern: '#login', hash: cleanHash, params: {} };
@@ -158,61 +154,56 @@
         window.dispatchEvent(new CustomEvent('routechange', { detail: currentRoute }));
       } catch (e) {}
     }
+
+    updateDocumentTitle();
+  }
+
+  function updateDocumentTitle() {
+    if (typeof document === 'undefined' || !currentRoute) return;
+    var hash = currentRoute.hash || '';
+    var title = 'CodeAlpha Social';
+    if (hash.startsWith('#profile/')) title = '@' + hash.replace('#profile/', '') + ' · CodeAlpha';
+    else if (hash === '#following') title = 'Following · CodeAlpha';
+    else if (hash === '#explore' || hash === '#feed') title = 'Explore · CodeAlpha';
+    else if (hash === '#login') title = 'Log in · CodeAlpha';
+    else if (hash === '#register') title = 'Sign up · CodeAlpha';
+    document.title = title;
   }
 
   function navigate(path) {
     if (typeof window === 'undefined') return;
-    if (!path.startsWith('#')) {
-      path = '#' + path;
-    }
-    if (window.location.hash === path) {
-      handleRoute();
-    } else {
-      window.location.hash = path;
-    }
+    if (!path.startsWith('#')) path = '#' + path;
+    if (window.location.hash === path) handleRoute();
+    else window.location.hash = path;
   }
 
   function init() {
-    // Register default routes & views
-    addRoute('#explore', function () {
-      setActiveView('view-feed');
-    });
-
-    addRoute('#feed', function () {
-      setActiveView('view-feed');
-    });
-
-    addRoute('#following', function () {
-      setActiveView('view-feed');
-    });
-
+    addRoute('#explore', function () { setActiveView('view-feed'); });
+    addRoute('#feed', function () { setActiveView('view-feed'); });
+    addRoute('#following', function () { setActiveView('view-feed'); });
     addRoute('#login', function () {
       setActiveView('view-auth');
       updateAuthForms('login');
     });
-
     addRoute('#register', function () {
       setActiveView('view-auth');
       updateAuthForms('register');
     });
-
     addRoute('#profile/:username', function (info) {
       setActiveView('view-profile');
       var handleEl = document.getElementById('profile-handle');
       var headingEl = document.getElementById('profile-heading');
       if (info && info.params && info.params.username) {
-        if (handleEl) handleEl.textContent = '@' + info.params.username;
-        if (headingEl) headingEl.textContent = info.params.username;
+        var name = info.params.username;
+        if (headingEl) headingEl.textContent = name;
+        if (handleEl) handleEl.textContent = '@' + name;
       }
     });
 
     if (typeof window !== 'undefined') {
       window.addEventListener('hashchange', handleRoute);
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', handleRoute);
-      } else {
-        handleRoute();
-      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', handleRoute);
+      else handleRoute();
     }
   }
 
@@ -229,7 +220,6 @@
     updateAuthForms: updateAuthForms,
   };
 
-  // Self-init default router configuration
   init();
 
   if (typeof module !== 'undefined' && module.exports) {

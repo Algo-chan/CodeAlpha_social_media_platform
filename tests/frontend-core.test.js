@@ -114,22 +114,21 @@ describe('Frontend Core (Task 7)', () => {
       const css = res.text;
 
       // Light theme tokens
-      expect(css).toContain('--bg-canvas: #f8fafc');
+      expect(css).toContain('--bg-canvas: #f6f7f9');
       expect(css).toContain('--bg-surface: #ffffff');
-      expect(css).toContain('--text-primary: #0f172a');
-      expect(css).toContain('--text-secondary: #475569');
-      expect(css).toContain('--border-subtle: #e2e8f0');
-      expect(css).toContain('--accent-primary: #2563eb');
-      expect(css).toContain('--accent-heart: #e11d48');
+      expect(css).toContain('--text-primary: #12161f');
+      expect(css).toContain('--text-secondary: #4d5566');
+      expect(css).toContain('--border-subtle: #e4e7ec');
+      expect(css).toContain('--accent-primary: #cf3f31');
+      expect(css).toContain('--accent-heart: #cf3f31');
 
       // Dark theme tokens
-      expect(css).toContain('--bg-canvas: #090d16');
-      expect(css).toContain('--bg-surface: #111827');
-      expect(css).toContain('--text-primary: #f8fafc');
-      expect(css).toContain('--text-secondary: #94a3b8');
-      expect(css).toContain('--border-subtle: #1f2937');
-      expect(css).toContain('--accent-primary: #38bdf8');
-      expect(css).toContain('--accent-heart: #fb7185');
+      expect(css).toContain('--bg-canvas: #0d0f14');
+      expect(css).toContain('--bg-surface: #14171e');
+      expect(css).toContain('--text-primary: #f4f5f7');
+      expect(css).toContain('--text-secondary: #a3abbb');
+      expect(css).toContain('--accent-primary: #ff6a58');
+      expect(css).toContain('--accent-heart: #ff6a58');
 
       // Layout tokens
       expect(css).toContain('--navbar-height: 56px');
