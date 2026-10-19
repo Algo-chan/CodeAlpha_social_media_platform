@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const authRoutes = require('./routes/auth.routes');
+const postRoutes = require('./routes/post.routes');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Versioned API routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/posts', postRoutes);
 
 // 404 handler for unmatched routes
 app.use((req, res) => {
@@ -50,6 +52,10 @@ app.use((err, req, res, next) => {
     status = 400;
     message = err.errors ? err.errors.map((e) => e.message).join(', ') : 'Validation error';
     code = 'VALIDATION_ERROR';
+  } else if (err.name === 'MulterError') {
+    status = 400;
+    message = err.message;
+    code = err.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : err.code || 'UPLOAD_ERROR';
   }
 
   res.status(status).json({
