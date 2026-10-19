@@ -1,3 +1,4 @@
+const fs = require('fs');
 const postService = require('../services/post.service');
 
 /**
@@ -16,6 +17,11 @@ async function create(req, res, next) {
       data: { post },
     });
   } catch (err) {
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (_) {}
+    }
     return next(err);
   }
 }

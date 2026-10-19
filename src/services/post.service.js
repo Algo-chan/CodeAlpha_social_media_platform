@@ -4,10 +4,24 @@ const { Op } = require('sequelize');
 const { Post, User, Follow, sequelize } = require('../models');
 
 /**
+ * Helper to unlink an uploaded file if validation or creation fails.
+ */
+function cleanupUploadedFile(file) {
+  if (file && file.path && fs.existsSync(file.path)) {
+    try {
+      fs.unlinkSync(file.path);
+    } catch (err) {
+      console.error('Failed to clean up uploaded file:', err);
+    }
+  }
+}
+
+/**
  * Create a new post with optional uploaded media.
  */
 async function createPost({ userId, content, file }) {
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    cleanupUploadedFile(file);
     const error = new Error('Post content is required and cannot be empty');
     error.status = 400;
     error.code = 'VALIDATION_ERROR';
@@ -16,6 +30,7 @@ async function createPost({ userId, content, file }) {
 
   const trimmedContent = content.trim();
   if (trimmedContent.length > 500) {
+    cleanupUploadedFile(file);
     const error = new Error('Post content cannot exceed 500 characters');
     error.status = 400;
     error.code = 'VALIDATION_ERROR';
@@ -24,13 +39,18 @@ async function createPost({ userId, content, file }) {
 
   const imageUrl = file ? `/uploads/${file.filename}` : null;
 
-  const post = await Post.create({
-    user_id: userId,
-    content: trimmedContent,
-    image_url: imageUrl,
-  });
+  try {
+    const post = await Post.create({
+      user_id: userId,
+      content: trimmedContent,
+      image_url: imageUrl,
+    });
 
-  return await getPostById(post.id, userId);
+    return await getPostById(post.id, userId);
+  } catch (err) {
+    cleanupUploadedFile(file);
+    throw err;
+  }
 }
 
 /**
@@ -81,7 +101,7 @@ function getPostAttributes(currentUserId) {
  */
 async function getExploreFeed({ currentUserId = null, page = 1, limit = 10 } = {}) {
   const safePage = Math.max(1, parseInt(page, 10) || 1);
-  const safeLimit = Math.max(1, parseInt(limit, 10) || 10);
+  const safeLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
   const offset = (safePage - 1) * safeLimit;
 
   const { count, rows: posts } = await Post.findAndCountAll({
@@ -111,7 +131,7 @@ async function getExploreFeed({ currentUserId = null, page = 1, limit = 10 } = {
  */
 async function getFollowingFeed({ currentUserId, page = 1, limit = 10 } = {}) {
   const safePage = Math.max(1, parseInt(page, 10) || 1);
-  const safeLimit = Math.max(1, parseInt(limit, 10) || 10);
+  const safeLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
   const offset = (safePage - 1) * safeLimit;
 
   if (!currentUserId) {

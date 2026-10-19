@@ -127,6 +127,28 @@ describe('Posts API & Feeds', () => {
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
     });
+
+    it('cleans up uploaded file if post content validation fails', async () => {
+      const samplePng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      );
+
+      const uploadsDir = path.join(__dirname, '../public/uploads');
+      const filesBefore = fs.readdirSync(uploadsDir);
+
+      const res = await request(app)
+        .post('/api/v1/posts')
+        .set('Authorization', `Bearer ${token1}`)
+        .field('content', '   ')
+        .attach('image', samplePng, 'fail_validation.png');
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+
+      const filesAfter = fs.readdirSync(uploadsDir);
+      expect(filesAfter.length).toBe(filesBefore.length);
+    });
   });
 
   describe('Explore Feed', () => {
@@ -192,6 +214,12 @@ describe('Posts API & Feeds', () => {
 
       const page3 = await request(app).get('/api/v1/posts?tab=explore&page=3&limit=2');
       expect(page3.body.data.posts.length).toBe(1);
+    });
+
+    it('clamps pagination limit to maximum ceiling of 100', async () => {
+      const res = await request(app).get('/api/v1/posts?tab=explore&limit=999');
+      expect(res.status).toBe(200);
+      expect(res.body.data.limit).toBe(100);
     });
   });
 
