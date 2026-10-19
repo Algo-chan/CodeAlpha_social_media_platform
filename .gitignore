@@ -7,3 +7,5 @@ public/uploads/
 .gemini/
 .specify/
 coverage/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
