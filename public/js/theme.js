@@ -32,9 +32,9 @@
 
   function updateToggleUI(theme) {
     if (typeof document === 'undefined') return;
+    var isDark = theme === 'dark';
     var toggleButtons = document.querySelectorAll('.theme-toggle-btn');
     toggleButtons.forEach(function (btn) {
-      var isDark = theme === 'dark';
       btn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
       btn.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
       var moon = btn.querySelector('.icon-moon');
@@ -44,6 +44,10 @@
         moon.style.display = isDark ? 'none' : 'block';
         sun.style.display = isDark ? 'block' : 'none';
       }
+      // When the toggle is a menu row, spell out the target instead of
+      // relying on the icon alone.
+      var label = btn.querySelector('span:not(.theme-icon)');
+      if (label) label.textContent = isDark ? 'Light mode' : 'Dark mode';
       // Keep the browser chrome in step with the app theme.
       var meta = document.querySelector('meta[name="theme-color"]:not([media])');
       if (!meta) {
