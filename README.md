@@ -11,6 +11,7 @@ A distilled, production-grade mini social media web platform built with a layere
 - [Architecture & Design](#architecture--design)
 - [Tech Stack](#tech-stack)
 - [Zero-Setup Quickstart](#zero-setup-quickstart)
+- [🌐 Zero-Cost Cloud Deployment Guide](#-zero-cost-cloud-deployment-guide)
 - [Demo Credentials](#demo-credentials)
 - [API Reference](#api-reference)
 - [Database Schema & Constraints](#database-schema--constraints)
@@ -97,9 +98,10 @@ graph TD
 | Component | Technology | Rationale |
 |---|---|---|
 | **Backend Framework** | Node.js / Express.js (v4.21+) | High performance, lightweight, modular REST API |
-| **Database** | SQLite3 via Sequelize ORM (v6.37+) | Zero external DB setup required, full SQL constraint enforcement |
+| **Database** | PostgreSQL (Neon.tech) / SQLite3 via Sequelize | Multi-dialect: Cloud PostgreSQL in production; SQLite for zero-setup local dev & instant testing |
 | **Authentication** | JWT (`jsonwebtoken`) + `bcryptjs` (10 rounds) | Stateless bearer token authentication and secure password hashing |
-| **File Uploads** | Multer (5MB limit, MIME whitelist) | Self-contained local disk uploads served statically |
+| **Media Storage** | Cloudinary / Multer (5MB limit, MIME whitelist) | Persistent cloud media storage with local disk fallback for offline development |
+| **Security & Hardening** | Helmet, `express-rate-limit`, reverse proxy trust | CSP media whitelisting, brute-force & spam mitigation, accurate proxy IP detection |
 | **Frontend** | Vanilla ES6+ Modules, Semantic HTML5, CSS Variables | Ultra-fast load times, zero build tool overhead, offline reliability |
 | **Testing** | Jest (v29.7+) + Supertest (v7.0+) | In-memory testing covering routes, services, models, and full E2E lifecycle |
 
@@ -137,6 +139,97 @@ graph TD
 
 5. **Open in browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🌐 Zero-Cost Cloud Deployment Guide
+
+Deploy this platform to the public internet at **$0.00/month** using free tiers of industry-standard cloud providers:
+- **Compute / Hosting:** [Render.com](https://render.com) (Free Node.js Web Service)
+- **Database:** [Neon.tech](https://neon.tech) (Free Serverless PostgreSQL with SSL)
+- **Persistent Media Storage:** [Cloudinary](https://cloudinary.com) (Free 25GB media storage)
+
+```mermaid
+flowchart LR
+    User["Web & Mobile Users"]
+    Render["Render.com<br/>(Node.js Web Service)"]
+    Neon["Neon.tech<br/>(PostgreSQL Database)"]
+    Cloudinary["Cloudinary CDN<br/>(Media Storage)"]
+
+    User -->|"HTTPS"| Render
+    Render -->|"DATABASE_URL (SSL)"| Neon
+    Render -->|"Direct Image Stream"| Cloudinary
+    Cloudinary -->|"Optimized CDN Delivery"| User
+```
+
+### Step 1: Create a Free PostgreSQL Database on Neon.tech
+
+1. Visit [neon.tech](https://neon.tech) and register for a free account (no credit card required).
+2. Click **Create Project**, enter a project name (e.g. `social-media-platform`), and choose your preferred cloud region.
+3. In your project dashboard, navigate to **Connection Details**.
+4. Select the connection string format (Node.js / Connection string) and copy it. Ensure `?sslmode=require` is appended to the string:
+   ```text
+   postgresql://username:password@ep-sample-pooler.region.aws.neon.tech/neondb?sslmode=require
+   ```
+   *(Keep this string secure—this is your `DATABASE_URL`)*.
+
+### Step 2: Create a Free Media Storage Account on Cloudinary
+
+1. Visit [cloudinary.com](https://cloudinary.com) and sign up for the free tier (includes 25GB managed cloud storage and 25 monthly transformation credits).
+2. From the **Cloudinary Dashboard**, locate your **Product Environment Credentials**:
+   - **Cloud Name** (`CLOUDINARY_CLOUD_NAME`)
+   - **API Key** (`CLOUDINARY_API_KEY`)
+   - **API Secret** (`CLOUDINARY_API_SECRET`)
+3. Copy these credentials. When configured, image uploads are directly streamed into your Cloudinary bucket with automatic width constraints (1200px max) and quality optimization, ensuring images survive Render container restarts.
+
+### Step 3: Deploy to Render.com
+
+Deploy your repository using either Render's Infrastructure-as-Code Blueprint (`render.yaml`) or manual web service configuration:
+
+#### Option A: 1-Click Blueprint Deployment (Recommended)
+1. Fork or push this repository to your GitHub account.
+2. In the [Render.com Dashboard](https://dashboard.render.com), click **New +** $\rightarrow$ **Blueprint**.
+3. Select and connect your GitHub repository. Render will automatically parse [render.yaml](render.yaml).
+4. Supply the secret environment variables when prompted:
+   - `DATABASE_URL`: Your Neon PostgreSQL connection string from Step 1.
+   - `CLOUDINARY_CLOUD_NAME`: From Step 2.
+   - `CLOUDINARY_API_KEY`: From Step 2.
+   - `CLOUDINARY_API_SECRET`: From Step 2.
+5. Click **Apply**. Render will generate a cryptographically secure `JWT_SECRET`, build the project, and provision your live HTTPS URL.
+
+#### Option B: Manual Web Service Setup
+1. In the Render Dashboard, click **New +** $\rightarrow$ **Web Service**.
+2. Connect your GitHub repository.
+3. Configure the service settings:
+   - **Name:** `codealpha-social-media` (or any custom name)
+   - **Environment:** `Node`
+   - **Region:** Closest to your Neon.tech database region
+   - **Branch:** `main`
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Instance Type:** `Free`
+4. In the **Environment Variables** section, add the following variables:
+   | Variable | Value / Description |
+   |---|---|
+   | `NODE_ENV` | `production` |
+   | `PORT` | `10000` (Render default) |
+   | `DATABASE_URL` | Your Neon PostgreSQL connection string (`?sslmode=require`) |
+   | `JWT_SECRET` | A secure 64+ char random string (e.g. `openssl rand -hex 32`) |
+   | `CLOUDINARY_CLOUD_NAME` | Your Cloudinary Cloud Name |
+   | `CLOUDINARY_API_KEY` | Your Cloudinary API Key |
+   | `CLOUDINARY_API_SECRET` | Your Cloudinary API Secret |
+   | `CORS_ORIGIN` | `*` (or your custom domain) |
+5. Click **Create Web Service**.
+
+### Clean Production Startup & Data Isolation
+
+- **Clean Schema Synchronization:** In production, running `npm start` executes `sequelize.sync()`. This verifies connection to PostgreSQL and automatically establishes all required relational tables (`users`, `posts`, `comments`, `likes`, `follows`), primary keys, foreign key constraints, and unique indices.
+- **Pure Production State:** Startup initializes an entirely clean schema without populating any placeholder users or sample posts. Live visitors will register real accounts and author real content.
+- **Seeder Isolation:** The seed script (`npm run seed`) is decoupled and intended strictly for local development and demonstration. It is never invoked automatically during deployment or production server boot.
+- **Production Hardening in Action:**
+  - **Reverse Proxy Trust:** `trust proxy` is enabled so Render's forwarding proxies do not obscure user IP addresses.
+  - **Rate Limiting:** Protects registration/login routes (15 req / 15 min per IP) and post submissions (30 posts / hour per account) from brute-force attacks and spam.
+  - **Helmet Content Security Policy:** Content Security Policy headers whitelist `https://res.cloudinary.com` to guarantee secure media rendering across all modern web browsers.
 
 ---
 
@@ -276,11 +369,15 @@ npm run test:e2e
 
 ### Test Coverage Breakdown
 - `tests/database.test.js`: Database connection and schema verification.
+- `tests/database-config.test.js`: PostgreSQL multi-dialect handling, SSL configuration, and SQLite fallbacks.
 - `tests/models.test.js`: Sequelize model constraints, validations, and cascading rules.
 - `tests/auth.test.js`: User registration, login, JWT validation, and invalid credentials.
 - `tests/posts.test.js`: Post creation, image uploads, 5MB limits, Explore/Following feeds.
 - `tests/interactions.test.js`: Idempotent likes, comments validation, follow network, and self-follow rejection.
 - `tests/seed.test.js`: Database seeding idempotency and relations.
+- `tests/cloudinary.test.js`: Cloudinary stream upload, optimization, and post deletion asset cleanup.
+- `tests/security.test.js`: Helmet CSP headers, rate-limiting on auth and posts, reverse proxy trust.
+- `tests/production-env.test.js`: Production environment template variables and Render Blueprint configuration.
 - `tests/frontend-core.test.js`: API client bearer token handling and dark/light theme switching.
 - `tests/frontend-components.test.js`: Feed rendering, like toggling, modal comments, and auth redirect flows.
 - `tests/e2e-flow.test.js`: Complete multi-user simulation (registration $\rightarrow$ post with media $\rightarrow$ like $\rightarrow$ comment $\rightarrow$ follow $\rightarrow$ feed verification $\rightarrow$ profile verification $\rightarrow$ guest gating).
@@ -290,26 +387,31 @@ npm run test:e2e
 ## Directory Structure
 
 ```
+├── .env.example               # Development environment variable template
+├── .env.production.example    # Cloud production environment variable template
+├── render.yaml                # Render.com Infrastructure-as-Code Blueprint
 ├── docs/                      # Architectural specifications & requirements
 ├── public/                    # Static client assets (Zero-CDN)
 │   ├── css/                   # Design system tokens and styles
 │   ├── js/                    # Vanilla ES6 modules & API client
-│   ├── uploads/               # Uploaded post media files
+│   ├── uploads/               # Local uploads (development fallback)
 │   └── index.html             # Single-page application shell
 ├── scripts/
 │   └── seed.js                # Database seeder with realistic demo data
 ├── src/
-│   ├── config/                # Database & environment configurations
+│   ├── config/                # Database (PostgreSQL/SQLite) & environment configurations
 │   ├── controllers/           # HTTP handlers (auth, post, interaction, user)
-│   ├── middleware/            # Auth JWT validation, Multer file upload handling
+│   ├── middleware/            # Auth JWT validation, Multer/Cloudinary upload handling
 │   ├── models/                # Sequelize relational models & associations
 │   ├── routes/                # Versioned Express routes (/api/v1)
 │   ├── services/              # Domain logic & database operations
 │   ├── utils/                 # Token utilities & helpers
-│   ├── app.js                 # Express application setup
+│   ├── app.js                 # Express application setup (Helmet, Rate Limiter)
 │   └── server.js              # Server entry point
 ├── tests/                     # Integration and end-to-end test suites
 │   ├── auth.test.js
+│   ├── cloudinary.test.js
+│   ├── database-config.test.js
 │   ├── database.test.js
 │   ├── e2e-flow.test.js
 │   ├── frontend-components.test.js
@@ -317,6 +419,8 @@ npm run test:e2e
 │   ├── interactions.test.js
 │   ├── models.test.js
 │   ├── posts.test.js
+│   ├── production-env.test.js
+│   ├── security.test.js
 │   ├── seed.test.js
 │   └── setup.js
 ├── package.json
