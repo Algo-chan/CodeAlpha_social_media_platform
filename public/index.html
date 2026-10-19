@@ -79,20 +79,28 @@
           <textarea
             id="post-content-input"
             class="create-post-textarea"
-            placeholder="What's happening? (Max 280 characters)"
-            maxlength="280"
+            placeholder="What's happening? (Max 500 characters)"
+            maxlength="500"
             rows="3"
             aria-label="Post content"
           ></textarea>
+          <!-- Media Thumbnail Preview Container -->
+          <div id="post-media-preview-container" class="media-preview-container" style="display: none;">
+            <img id="post-media-preview" class="media-preview" alt="Attachment preview">
+            <button type="button" id="btn-remove-media" class="btn-remove-media" aria-label="Remove image">&times;</button>
+          </div>
           <div class="create-post-footer">
             <div class="file-input-wrapper">
               <label for="post-media-input" class="btn btn-secondary btn-sm">
                 <span>📷 Add Media</span>
               </label>
-              <input type="file" id="post-media-input" accept="image/jpeg,image/png,image/gif,image/webp">
+              <input type="file" id="post-media-input" accept="image/jpeg,image/png,image/webp,image/gif">
               <span id="post-media-filename" class="form-helper"></span>
             </div>
-            <button type="submit" class="btn btn-primary" id="btn-submit-post">Post</button>
+            <div class="create-post-actions-right">
+              <span id="post-char-counter" class="char-counter">0 / 500</span>
+              <button type="submit" class="btn btn-primary" id="btn-submit-post">Post</button>
+            </div>
           </div>
         </form>
       </section>
@@ -112,6 +120,9 @@
       <div class="form-card">
         <h1 id="auth-heading" class="form-title">Join CodeAlpha</h1>
         <p id="auth-subtitle" class="form-subtitle">Connect and share with developers worldwide</p>
+
+        <!-- Prominent Friendly Reason Banner for Gated Interaction Interceptor -->
+        <div id="auth-banner" class="auth-banner" style="display: none;"></div>
 
         <!-- Dynamic Auth Form Container -->
         <div id="auth-forms-container">
@@ -158,15 +169,23 @@
     <section id="view-profile" class="view" aria-labelledby="profile-heading">
       <div id="profile-container" class="profile-card">
         <div class="profile-header">
-          <div>
-            <h1 id="profile-heading" class="profile-username" style="font-size: var(--font-title); font-weight: var(--font-weight-bold);">User Profile</h1>
-            <p id="profile-handle" class="post-author-handle">@username</p>
-            <p id="profile-bio" class="profile-bio">No bio provided yet.</p>
+          <div class="profile-header-main">
+            <div id="profile-avatar" class="profile-avatar-wrapper">
+              <span class="avatar-initials profile-avatar-large">U</span>
+            </div>
+            <div>
+              <h1 id="profile-heading" class="profile-username" style="font-size: var(--font-title); font-weight: var(--font-weight-bold);">User Profile</h1>
+              <p id="profile-handle" class="post-author-handle">@username</p>
+              <p id="profile-bio" class="profile-bio">No bio provided yet.</p>
+              <p id="profile-joined-date" class="profile-joined-date"></p>
+            </div>
           </div>
           <div id="profile-action-container">
             <button id="btn-follow-toggle" class="btn btn-outline btn-sm" type="button">Follow</button>
           </div>
         </div>
+
+        <div id="profile-edit-container" class="profile-edit-container" style="display: none;"></div>
 
         <div class="profile-stats">
           <div class="stat-item">
@@ -202,6 +221,10 @@
   <!-- Client Script Modules -->
   <script src="/js/api.js"></script>
   <script src="/js/router.js"></script>
+  <script src="/js/components/postCard.js"></script>
+  <script src="/js/components/feed.js"></script>
+  <script src="/js/components/authView.js"></script>
+  <script src="/js/components/profileView.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>
