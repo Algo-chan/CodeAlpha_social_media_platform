@@ -1,15 +1,19 @@
 /**
- * Feed Component & Gated Interaction Interceptor
- * Manages dual feed tabs (Explore vs Following), post composer with thumbnail preview,
- * and gated interaction intercepts for unauthenticated guests.
+ * Feed
+ * Two tabs (Explore / Following), a post composer with an image preview, and
+ * the shared gate that sends signed-out visitors to registration before they
+ * can like, comment, follow, or post.
  */
 (function (global) {
   'use strict';
 
+  function icon(name, opts) {
+    return global.icons && global.icons.svg ? global.icons.svg(name, opts) : '';
+  }
+
   /**
-   * Universal Gated Interaction Interceptor
-   * Checks if user is authenticated; if not, intercepts and redirects to
-   * #register?redirect=<target>&reason=interact
+   * Gate for any action that requires an account. Returns the callback result
+   * when signed in; otherwise redirects to registration and returns false.
    */
   function requireAuth(actionCallback, target) {
     var user = null;
@@ -25,9 +29,7 @@
       : (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null);
 
     if (token && user) {
-      if (typeof actionCallback === 'function') {
-        return actionCallback(user);
-      }
+      if (typeof actionCallback === 'function') return actionCallback(user);
       return true;
     }
 
@@ -51,39 +53,52 @@
     }
   }
 
+  function renderSkeletons(container) {
+    var card = [
+      '<div class="skeleton-card" aria-hidden="true">',
+      '  <div class="skeleton-row">',
+      '    <div class="skeleton skeleton-avatar"></div>',
+      '    <div class="skeleton skeleton-line w-40"></div>',
+      '  </div>',
+      '  <div class="skeleton skeleton-line w-100"></div>',
+      '  <div class="skeleton skeleton-line w-80"></div>',
+      '  <div class="skeleton skeleton-media"></div>',
+      '</div>',
+    ].join('');
+    container.innerHTML = card + card;
+  }
+
   /**
-   * Render feed for tab: 'explore' or 'following'
+   * Render the feed for a tab: 'explore' or 'following'.
    */
   function renderFeed(tab) {
     tab = tab === 'following' ? 'following' : 'explore';
 
-    if (typeof document === 'undefined') {
-      return { tab: tab };
-    }
+    if (typeof document === 'undefined') return { tab: tab };
 
-    // Update active tab buttons
     var exploreTabBtn = document.getElementById('tab-explore');
     var followingTabBtn = document.getElementById('tab-following');
-    if (exploreTabBtn) exploreTabBtn.classList.toggle('active', tab === 'explore');
-    if (followingTabBtn) followingTabBtn.classList.toggle('active', tab === 'following');
+    if (exploreTabBtn) exploreTabBtn.setAttribute('aria-selected', tab === 'explore' ? 'true' : 'false');
+    if (followingTabBtn) followingTabBtn.setAttribute('aria-selected', tab === 'following' ? 'true' : 'false');
 
     var feedContainer = document.getElementById('feed-posts-container');
     if (!feedContainer) return;
 
     var currentUser = getCurrentUser();
 
-    // If guest clicks Following tab: show engaging prompt to register/login
+    // A signed-out visitor on Following gets a prompt, not an empty list.
     if (tab === 'following' && !currentUser) {
+      feedContainer.setAttribute('aria-busy', 'false');
       feedContainer.innerHTML = [
         '<div class="empty-state">',
-        '  <div class="empty-state-icon">👥</div>',
-        '  <h3 class="empty-state-title">Follow creators to fill your feed</h3>',
+        '  <span class="empty-state-icon" aria-hidden="true">' + icon('users', { size: 22 }) + '</span>',
+        '  <h2 class="empty-state-title">Follow creators to fill your feed</h2>',
         '  <p class="empty-state-desc">Sign in to see posts from people you follow, or explore trending public creators.</p>',
-        '  <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem;">',
-        '    <a href="#register?redirect=' + encodeURIComponent('#following') + '&reason=interact" class="btn btn-primary btn-sm">Sign Up</a>',
-        '    <a href="#explore" class="btn btn-secondary btn-sm" id="btn-empty-explore">Explore Creators</a>',
+        '  <div class="empty-state-actions">',
+        '    <a href="#register?redirect=' + encodeURIComponent('#following') + '&reason=interact" class="btn btn-primary btn-sm">Sign up</a>',
+        '    <a href="#explore" class="btn btn-outline btn-sm" id="btn-empty-explore">Explore creators</a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('');
 
       var exploreBtn = document.getElementById('btn-empty-explore');
@@ -96,16 +111,12 @@
       return;
     }
 
-    // Loading State
-    feedContainer.innerHTML = [
-      '<div class="empty-state" style="border: none;">',
-      '  <div class="form-helper" style="font-size: 1rem;">Loading posts...</div>',
-      '</div>'
-    ].join('');
+    feedContainer.setAttribute('aria-busy', 'true');
+    renderSkeletons(feedContainer);
 
-    // Fetch feed posts from API
-    global.api.get('/posts?tab=' + tab)
+    global.api.get('/posts?tab=' + tab, { suppressToast: true })
       .then(function (res) {
+        feedContainer.setAttribute('aria-busy', 'false');
         feedContainer.innerHTML = '';
         var posts = (res && res.data && res.data.posts) ? res.data.posts : [];
 
@@ -113,11 +124,13 @@
           if (tab === 'following') {
             feedContainer.innerHTML = [
               '<div class="empty-state">',
-              '  <div class="empty-state-icon">🌟</div>',
-              '  <h3 class="empty-state-title">No posts in your following feed</h3>',
+              '  <span class="empty-state-icon" aria-hidden="true">' + icon('sparkle', { size: 22 }) + '</span>',
+              '  <h2 class="empty-state-title">Your following feed is quiet</h2>',
               '  <p class="empty-state-desc">You\'re not following anyone yet. Discover creators in Explore!</p>',
-              '  <a href="#explore" class="btn btn-primary btn-sm" id="btn-discover-explore" style="display: inline-flex; margin-top: 0.5rem;">Discover Creators</a>',
-              '</div>'
+              '  <div class="empty-state-actions">',
+              '    <a href="#explore" class="btn btn-primary btn-sm" id="btn-discover-explore">Discover creators</a>',
+              '  </div>',
+              '</div>',
             ].join('');
 
             var discoverBtn = document.getElementById('btn-discover-explore');
@@ -130,55 +143,54 @@
           } else {
             feedContainer.innerHTML = [
               '<div class="empty-state">',
-              '  <div class="empty-state-icon">✍️</div>',
-              '  <h3 class="empty-state-title">Welcome to the Feed</h3>',
-              '  <p class="empty-state-desc">No posts found. Share the first post above!</p>',
-              '</div>'
+              '  <span class="empty-state-icon" aria-hidden="true">' + icon('pen-square', { size: 22 }) + '</span>',
+              '  <h2 class="empty-state-title">No posts here yet</h2>',
+              '  <p class="empty-state-desc">Be the first to share something with the community.</p>',
+              '</div>',
             ].join('');
           }
           return;
         }
 
-        posts.forEach(function (post) {
+        posts.forEach(function (post, index) {
           if (global.postCard && typeof global.postCard.renderPostCard === 'function') {
             var cardEl = global.postCard.renderPostCard(post, currentUser, {
               onDelete: function () {
-                // If container becomes empty after deleting
-                if (feedContainer.querySelectorAll('.post-card').length === 0) {
-                  renderFeed(tab);
-                }
-              }
+                if (feedContainer.querySelectorAll('.post-card').length === 0) renderFeed(tab);
+              },
             });
+            // Only the first screenful animates in; the rest appear instantly.
+            if (index > 3) cardEl.classList.remove('is-new');
+            cardEl.classList.add('is-new');
             feedContainer.appendChild(cardEl);
           }
         });
       })
       .catch(function (err) {
+        feedContainer.setAttribute('aria-busy', 'false');
         feedContainer.innerHTML = [
           '<div class="empty-state">',
-          '  <div class="empty-state-icon">⚠️</div>',
-          '  <h3 class="empty-state-title">Unable to load feed</h3>',
-          '  <p class="empty-state-desc">' + (err.message || 'Please check your connection and try again.') + '</p>',
-          '  <button class="btn btn-outline btn-sm" id="btn-retry-feed" type="button">Try Again</button>',
-          '</div>'
+          '  <span class="empty-state-icon" aria-hidden="true">' + icon('alert-circle', { size: 22 }) + '</span>',
+          '  <h2 class="empty-state-title">Couldn\'t load the feed</h2>',
+          '  <p class="empty-state-desc">' + (err.message || 'Check your connection and try again.') + '</p>',
+          '  <div class="empty-state-actions">',
+          '    <button class="btn btn-outline btn-sm" id="btn-retry-feed" type="button">Try again</button>',
+          '  </div>',
+          '</div>',
         ].join('');
 
         var retryBtn = document.getElementById('btn-retry-feed');
-        if (retryBtn) {
-          retryBtn.addEventListener('click', function () {
-            renderFeed(tab);
-          });
-        }
+        if (retryBtn) retryBtn.addEventListener('click', function () { renderFeed(tab); });
       });
   }
 
   /**
-   * Initializes Post Composer (create post form, character counter, file thumbnail preview)
+   * Post composer: character counter, optional image with an instant preview,
+   * and submit handling.
    */
   function initPostComposer() {
     if (typeof document === 'undefined') return;
 
-    var composerContainer = document.getElementById('create-post-container');
     var composerForm = document.getElementById('create-post-form');
     var contentInput = document.getElementById('post-content-input');
     var mediaInput = document.getElementById('post-media-input');
@@ -191,61 +203,49 @@
 
     if (!composerForm || !contentInput) return;
 
+    var MAX_LENGTH = 500;
     var selectedFile = null;
 
-    // Gate interaction when unauthenticated user focuses composer
     contentInput.addEventListener('focus', function () {
       requireAuth(null, '#explore');
     });
 
-    // Character counter live update
     function updateCharCounter() {
       var len = contentInput.value.length;
       if (charCounter) {
-        charCounter.textContent = len + ' / 500';
-        if (len > 500) {
-          charCounter.classList.add('char-counter-over');
-          if (submitBtn) submitBtn.disabled = true;
-        } else {
-          charCounter.classList.remove('char-counter-over');
-          if (submitBtn) submitBtn.disabled = false;
-        }
+        charCounter.textContent = String(MAX_LENGTH - len);
+        var over = len > MAX_LENGTH;
+        charCounter.classList.toggle('char-counter-over', over);
+        if (submitBtn) submitBtn.disabled = over;
       }
     }
     contentInput.addEventListener('input', updateCharCounter);
 
-    // Media File Input Preview & Validation
+    function clearMediaPreview() {
+      selectedFile = null;
+      if (mediaInput) mediaInput.value = '';
+      if (mediaFilename) mediaFilename.textContent = '';
+      if (previewContainer) previewContainer.hidden = true;
+      if (previewImg) previewImg.removeAttribute('src');
+    }
+
     if (mediaInput) {
       mediaInput.addEventListener('click', function (e) {
-        if (!requireAuth(null, '#explore')) {
-          e.preventDefault();
-        }
+        if (!requireAuth(null, '#explore')) e.preventDefault();
       });
 
       mediaInput.addEventListener('change', function () {
         var file = mediaInput.files && mediaInput.files[0];
-        if (!file) {
-          clearMediaPreview();
-          return;
-        }
+        if (!file) { clearMediaPreview(); return; }
 
-        // Validate MIME type
         var allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!allowedTypes.includes(file.type)) {
-          if (global.showToast) {
-            global.showToast('Please select a valid image (JPEG, PNG, WebP, GIF)', 'error');
-          }
-          mediaInput.value = '';
+        if (allowedTypes.indexOf(file.type) === -1) {
+          if (global.showToast) global.showToast('That file type isn\'t supported. Use a JPEG, PNG, WebP, or GIF.', 'error');
           clearMediaPreview();
           return;
         }
-
-        // Validate File Size (Max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-          if (global.showToast) {
-            global.showToast('Image size must not exceed 5MB', 'error');
-          }
-          mediaInput.value = '';
+          if (global.showToast) global.showToast('That image is over 5MB. Pick a smaller file.', 'error');
           clearMediaPreview();
           return;
         }
@@ -253,24 +253,15 @@
         selectedFile = file;
         if (mediaFilename) mediaFilename.textContent = file.name;
 
-        // Instant client-side thumbnail preview
         if (previewContainer && previewImg) {
           var reader = new FileReader();
           reader.onload = function (e) {
             previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
+            previewContainer.hidden = false;
           };
           reader.readAsDataURL(file);
         }
       });
-    }
-
-    function clearMediaPreview() {
-      selectedFile = null;
-      if (mediaInput) mediaInput.value = '';
-      if (mediaFilename) mediaFilename.textContent = '';
-      if (previewContainer) previewContainer.style.display = 'none';
-      if (previewImg) previewImg.src = '';
     }
 
     if (removeMediaBtn) {
@@ -280,7 +271,13 @@
       });
     }
 
-    // Form Submission
+    function setSubmitting(on) {
+      if (!submitBtn) return;
+      submitBtn.disabled = on;
+      submitBtn.classList.toggle('is-loading', on);
+      submitBtn.setAttribute('aria-busy', on ? 'true' : 'false');
+    }
+
     composerForm.addEventListener('submit', function (e) {
       e.preventDefault();
 
@@ -288,71 +285,52 @@
 
       var content = contentInput.value.trim();
       if (!content) {
-        if (global.showToast) global.showToast('Please enter text for your post', 'error');
+        if (global.showToast) global.showToast('Add some text before posting.', 'error');
         contentInput.focus();
         return;
       }
-
-      if (content.length > 500) {
-        if (global.showToast) global.showToast('Post cannot exceed 500 characters', 'error');
+      if (content.length > MAX_LENGTH) {
+        if (global.showToast) global.showToast('Posts are limited to ' + MAX_LENGTH + ' characters.', 'error');
         return;
       }
 
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Posting...';
-      }
+      setSubmitting(true);
 
       var formData = new FormData();
       formData.append('content', content);
-      if (selectedFile) {
-        formData.append('image', selectedFile);
-      }
+      if (selectedFile) formData.append('image', selectedFile);
 
       global.api.post('/posts', formData, true)
         .then(function (res) {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Post';
-          }
-
+          setSubmitting(false);
           contentInput.value = '';
           updateCharCounter();
           clearMediaPreview();
 
-          if (global.showToast) {
-            global.showToast('Post published successfully!', 'success');
-          }
+          if (global.showToast) global.showToast('Your post is live.', 'success');
 
-          // Prepend new post to feed
           var newPost = res && res.data && res.data.post;
-          if (newPost) {
-            var feedContainer = document.getElementById('feed-posts-container');
-            if (feedContainer && global.postCard && typeof global.postCard.renderPostCard === 'function') {
-              // Remove empty state if present
-              var emptyState = feedContainer.querySelector('.empty-state');
-              if (emptyState) emptyState.remove();
+          if (!newPost) return;
 
-              var currentUser = getCurrentUser();
-              var cardEl = global.postCard.renderPostCard(newPost, currentUser);
-              if (feedContainer.firstChild) {
-                feedContainer.insertBefore(cardEl, feedContainer.firstChild);
-              } else {
-                feedContainer.appendChild(cardEl);
-              }
-            }
+          var feedContainer = document.getElementById('feed-posts-container');
+          if (feedContainer && global.postCard && typeof global.postCard.renderPostCard === 'function') {
+            var emptyState = feedContainer.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            var cardEl = global.postCard.renderPostCard(newPost, getCurrentUser());
+            cardEl.classList.add('is-new');
+            if (feedContainer.firstChild) feedContainer.insertBefore(cardEl, feedContainer.firstChild);
+            else feedContainer.appendChild(cardEl);
+            cardEl.scrollIntoView({ block: 'nearest' });
           }
         })
         .catch(function (err) {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Post';
-          }
-          if (global.showToast) {
-            global.showToast(err.message || 'Unable to create post', 'error');
-          }
+          setSubmitting(false);
+          if (global.showToast) global.showToast(err.message || 'Couldn\'t publish that post.', 'error');
         });
     });
+
+    updateCharCounter();
   }
 
   var feed = {

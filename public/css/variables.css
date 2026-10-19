@@ -1,131 +1,37 @@
-/* Design System Tokens: Adaptive Modern Slate */
+/* ==========================================================================
+   Design System Tokens — "Circulation"
+   --------------------------------------------------------------------------
+   A social feed is a stream of text and images that people read, scan, and
+   react to. This system is built around reading: one 640px editorial column,
+   a typographic scale tuned for prose, and a single vermilion accent that
+   marks the things you do (post, follow, like) against quiet slate surfaces.
 
-:root,
-[data-theme="light"] {
-  /* Slate Light Theme */
-  --bg-canvas: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-hover: #f1f5f9;
-  --bg-active: #e2e8f0;
-  
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --text-inverse: #f8fafc;
-  
-  --border-subtle: #e2e8f0;
-  --border-focus: #2563eb;
-  
-  --accent-primary: #2563eb;
-  --accent-primary-hover: #1d4ed8;
-  --accent-primary-subtle: rgba(37, 99, 235, 0.1);
-  --accent-heart: #e11d48;
-  --accent-heart-bg: rgba(225, 29, 72, 0.1);
-  --accent-danger: #dc2626;
-  --accent-danger-bg: rgba(220, 38, 38, 0.1);
-  --accent-success: #16a34a;
-  --accent-success-bg: rgba(22, 163, 74, 0.1);
+   Colour, type, space, motion and elevation all resolve through tokens so a
+   theme change is one attribute on <html>, not a stylesheet rewrite.
+   ========================================================================== */
 
-  /* Brief Aliases */
-  --bg: #ffffff;
-  --text: #0f172a;
-  --border: #e2e8f0;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  
-  /* Navbar blur background */
-  --navbar-bg: rgba(255, 255, 255, 0.85);
-}
-
-[data-theme="dark"] {
-  /* Slate Dark Theme */
-  --bg-canvas: #090d16;
-  --bg-surface: #111827;
-  --bg-elevated: #1f2937;
-  --bg-hover: #1e293b;
-  --bg-active: #334155;
-  
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-inverse: #0f172a;
-  
-  --border-subtle: #1f2937;
-  --border-focus: #38bdf8;
-  
-  --accent-primary: #38bdf8;
-  --accent-primary-hover: #0284c7;
-  --accent-primary-subtle: rgba(56, 189, 248, 0.15);
-  --accent-heart: #fb7185;
-  --accent-heart-bg: rgba(251, 113, 133, 0.15);
-  --accent-danger: #ef4444;
-  --accent-danger-bg: rgba(239, 68, 68, 0.15);
-  --accent-success: #22c55e;
-  --accent-success-bg: rgba(34, 197, 94, 0.15);
-
-  /* Brief Aliases */
-  --bg: #090d16;
-  --text: #f8fafc;
-  --border: #1f2937;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-  
-  /* Navbar blur background */
-  --navbar-bg: rgba(17, 24, 39, 0.85);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg-canvas: #090d16;
-    --bg-surface: #111827;
-    --bg-elevated: #1f2937;
-    --bg-hover: #1e293b;
-    --bg-active: #334155;
-    
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --text-inverse: #0f172a;
-    
-    --border-subtle: #1f2937;
-    --border-focus: #38bdf8;
-    
-    --accent-primary: #38bdf8;
-    --accent-primary-hover: #0284c7;
-    --accent-primary-subtle: rgba(56, 189, 248, 0.15);
-    --accent-heart: #fb7185;
-    --accent-heart-bg: rgba(251, 113, 133, 0.15);
-    --accent-danger: #ef4444;
-    --accent-danger-bg: rgba(239, 68, 68, 0.15);
-    --accent-success: #22c55e;
-    --accent-success-bg: rgba(34, 197, 94, 0.15);
-
-    --bg: #090d16;
-    --text: #f8fafc;
-    --border: #1f2937;
-
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-
-    --navbar-bg: rgba(17, 24, 39, 0.85);
-  }
-}
-
+/* --------------------------------------------------------------------------
+   1. Static scales (theme-independent)
+   -------------------------------------------------------------------------- */
 :root {
-  /* Typography Tokens */
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* -- Type ---------------------------------------------------------------
+     A single variable family with a real size scale. Body copy is tuned for
+     long-form reading; display sizes tighten tracking so headlines read as
+     typography rather than enlarged body text. */
+  --font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* Modular scale, ratio ~1.2. Headings get negative tracking; small text
+     gets none. */
+  --font-display: clamp(1.625rem, 1.2rem + 1.9vw, 2.125rem);
   --font-title: 1.5rem;
   --font-subtitle: 1.25rem;
+  --font-lead: 1.0625rem;
   --font-body: 1rem;
   --font-meta: 0.875rem;
+  --font-micro: 0.8125rem;
   --font-badge: 0.75rem;
 
   --font-weight-normal: 400;
@@ -133,18 +39,237 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Layout Tokens */
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.03em;
+  --tracking-wide: 0.06em;
+
+  /* -- Space --------------------------------------------------------------
+     4px base grid. Named by intent so layouts read as intent, not pixels. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* -- Layout ------------------------------------------------------------- */
   --navbar-height: 56px;
   --max-width-feed: 640px;
   --max-width-content: 1024px;
+  --max-width-app: 1120px;
 
-  /* Radius Tokens */
+  /* -- Radius -------------------------------------------------------------
+     Small and restrained. Cards are 124px-radius-free by policy. */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
+  /* -- Motion -------------------------------------------------------------
+     Custom curves, never the weak built-ins. --ease-out for anything
+     entering or exiting; --ease-in-out for movement already on screen. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 280ms;
+
+  --transition-fast: var(--duration-fast) var(--ease-out);
+  --transition-normal: var(--duration-normal) var(--ease-out);
+  --transition-slow: var(--duration-slow) var(--ease-out);
+
+  --z-navbar: 100;
+  --z-overlay: 500;
+  --z-toast: 900;
+}
+
+/* --------------------------------------------------------------------------
+   2. Light theme — "Paper
+   --------------------------------------------------------------------------
+   Paper-warm neutrals rather than pure white, so long reading sessions are
+   easier on the eye and the accent reads as ink. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-canvas: #f6f7f9;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #eef0f4;
+  --bg-hover: #f2f4f7;
+  --bg-active: #e7eaf0;
+  --bg-inverse: #12161f;
+
+  --text-primary: #12161f;
+  --text-secondary: #4d5566;
+  --text-muted: #7c8698;
+  --text-inverse: #ffffff;
+
+  --border-subtle: #e4e7ec;
+  --border-strong: #d3d8e0;
+  --border-focus: #d4483b;
+
+  --accent-primary: #cf3f31;
+  --accent-primary-hover: #b23225;
+  --accent-primary-active: #97291e;
+  --accent-primary-subtle: rgba(207, 63, 49, 0.09);
+  --accent-on-primary: #ffffff;
+
+  --accent-heart: #cf3f31;
+  --accent-heart-bg: rgba(207, 63, 49, 0.1);
+
+  --accent-danger: #b3261e;
+  --accent-danger-bg: rgba(179, 38, 30, 0.09);
+  --accent-danger-border: rgba(179, 38, 30, 0.28);
+
+  --accent-success: #1f6f4a;
+  --accent-success-bg: rgba(31, 111, 74, 0.1);
+
+  --accent-info: #3a5ccc;
+  --accent-info-bg: rgba(58, 92, 204, 0.1);
+
+  --focus-ring: 0 0 0 2px var(--bg-canvas), 0 0 0 4px rgba(207, 63, 49, 0.45);
+
+  --shadow-xs: 0 1px 2px rgba(18, 22, 31, 0.05);
+  --shadow-sm: 0 1px 2px rgba(18, 22, 31, 0.06), 0 1px 1px rgba(18, 22, 31, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(18, 22, 31, 0.1), 0 2px 4px -2px rgba(18, 22, 31, 0.06);
+  --shadow-lg: 0 12px 28px -6px rgba(18, 22, 31, 0.16), 0 4px 10px -6px rgba(18, 22, 31, 0.1);
+  --shadow-xl: 0 24px 48px -12px rgba(18, 22, 31, 0.24);
+
+  --navbar-bg: rgba(255, 255, 255, 0.82);
+  --scrim: rgba(18, 22, 31, 0.42);
+
+  --skeleton-base: #eef0f4;
+  --skeleton-shine: #f8f9fb;
+}
+
+/* --------------------------------------------------------------------------
+   3. Dark theme — "Night
+   --------------------------------------------------------------------------
+   A warm-tinted near-black. Slate-blue-grey gradients have been banished;
+   this is neutral dark that keeps the vermilion accent legible. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-canvas: #0d0f14;
+  --bg-surface: #14171e;
+  --bg-elevated: #1a1e27;
+  --bg-sunken: #0a0c10;
+  --bg-hover: #1c2029;
+  --bg-active: #262b36;
+  --bg-inverse: #f6f7f9;
+
+  --text-primary: #f4f5f7;
+  --text-secondary: #a3abbb;
+  --text-muted: #767f90;
+  --text-inverse: #12161f;
+
+  --border-subtle: #23283300;
+  --border-subtle: #232833;
+  --border-strong: #333a48;
+  --border-focus: #ff6a58;
+
+  --accent-primary: #ff6a58;
+  --accent-primary-hover: #ff8574;
+  --accent-primary-active: #ff9c8d;
+  --accent-primary-subtle: rgba(255, 106, 88, 0.14);
+  --accent-on-primary: #1a0b08;
+
+  --accent-heart: #ff6a58;
+  --accent-heart-bg: rgba(255, 106, 88, 0.14);
+
+  --accent-danger: #ff7a6b;
+  --accent-danger-bg: rgba(255, 122, 107, 0.14);
+  --accent-danger-border: rgba(255, 122, 107, 0.34);
+
+  --accent-success: #5bd39a;
+  --accent-success-bg: rgba(91, 211, 154, 0.14);
+
+  --accent-info: #8ea8ff;
+  --accent-info-bg: rgba(142, 168, 255, 0.14);
+
+  --focus-ring: 0 0 0 2px var(--bg-canvas), 0 0 0 4px rgba(255, 106, 88, 0.5);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+
+  --navbar-bg: rgba(13, 15, 20, 0.82);
+  --scrim: rgba(0, 0, 0, 0.6);
+
+  --skeleton-base: #1a1e27;
+  --skeleton-shine: #232833;
+}
+
+/* Follow the OS when no explicit preference has been stored. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg-canvas: #0d0f14;
+    --bg-surface: #14171e;
+    --bg-elevated: #1a1e27;
+    --bg-sunken: #0a0c10;
+    --bg-hover: #1c2029;
+    --bg-active: #262b36;
+    --bg-inverse: #f6f7f9;
+
+    --text-primary: #f4f5f7;
+    --text-secondary: #a3abbb;
+    --text-muted: #767f90;
+    --text-inverse: #12161f;
+
+    --border-subtle: #232833;
+    --border-strong: #333a48;
+    --border-focus: #ff6a58;
+
+    --accent-primary: #ff6a58;
+    --accent-primary-hover: #ff8574;
+    --accent-primary-active: #ff9c8d;
+    --accent-primary-subtle: rgba(255, 106, 88, 0.14);
+    --accent-on-primary: #1a0b08;
+
+    --accent-heart: #ff6a58;
+    --accent-heart-bg: rgba(255, 106, 88, 0.14);
+
+    --accent-danger: #ff7a6b;
+    --accent-danger-bg: rgba(255, 122, 107, 0.14);
+    --accent-danger-border: rgba(255, 122, 107, 0.34);
+
+    --accent-success: #5bd39a;
+    --accent-success-bg: rgba(91, 211, 154, 0.14);
+
+    --accent-info: #8ea8ff;
+    --accent-info-bg: rgba(142, 168, 255, 0.14);
+
+    --focus-ring: 0 0 0 2px var(--bg-canvas), 0 0 0 4px rgba(255, 106, 88, 0.5);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
+    --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+
+    --navbar-bg: rgba(13, 15, 20, 0.82);
+    --scrim: rgba(0, 0, 0, 0.6);
+
+    --skeleton-base: #1a1e27;
+    --skeleton-shine: #232833;
+  }
 }
