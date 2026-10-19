@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
+const userRoutes = require('./routes/user.routes');
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Versioned API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/posts', postRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // 404 handler for unmatched routes
 app.use((req, res) => {
