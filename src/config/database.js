@@ -4,7 +4,8 @@ const path = require('path');
 
 function getDatabaseConfig(databaseUrl, nodeEnv, dbStorage) {
   const currentEnv = nodeEnv !== undefined ? nodeEnv : process.env.NODE_ENV;
-  const currentUrl = databaseUrl !== undefined ? databaseUrl : process.env.DATABASE_URL;
+  const isTest = currentEnv === 'test';
+  const currentUrl = databaseUrl !== undefined ? databaseUrl : (isTest ? undefined : process.env.DATABASE_URL);
 
   const isPostgres =
     typeof currentUrl === 'string' &&
@@ -23,7 +24,6 @@ function getDatabaseConfig(databaseUrl, nodeEnv, dbStorage) {
     };
   }
 
-  const isTest = currentEnv === 'test';
   let storage;
 
   if (dbStorage !== undefined) {
@@ -34,9 +34,11 @@ function getDatabaseConfig(databaseUrl, nodeEnv, dbStorage) {
     storage = ':memory:';
   } else {
     storage =
-      (process.env.NODE_ENV !== 'test' && process.env.DB_STORAGE) ||
+      (!isTest && process.env.DB_STORAGE) ||
       path.resolve(__dirname, '../../database.sqlite');
   }
+
+
 
   return {
     dialect: 'sqlite',
@@ -46,7 +48,8 @@ function getDatabaseConfig(databaseUrl, nodeEnv, dbStorage) {
 }
 
 const config = getDatabaseConfig();
-const databaseUrl = process.env.DATABASE_URL;
+const isTestMode = process.env.NODE_ENV === 'test';
+const databaseUrl = isTestMode ? undefined : process.env.DATABASE_URL;
 const isPostgres =
   typeof databaseUrl === 'string' &&
   (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://'));
@@ -59,3 +62,4 @@ module.exports = {
   sequelize,
   getDatabaseConfig,
 };
+

@@ -89,13 +89,17 @@ function formatPost(post, currentUserId) {
  * Helper to build attributes with like & comment count subqueries.
  */
 function getPostAttributes(currentUserId) {
+  const isPostgres = sequelize.getDialect() === 'postgres';
+  const postRef = isPostgres ? '"Post"."id"' : 'Post.id';
+  const booleanExpr = isPostgres ? '::boolean' : '';
+
   const includeAttributes = [
     [
-      sequelize.literal('(SELECT COUNT(*) FROM likes WHERE likes.post_id = Post.id)'),
+      sequelize.literal(`(SELECT COUNT(*) FROM likes WHERE likes.post_id = ${postRef})`),
       'likesCount',
     ],
     [
-      sequelize.literal('(SELECT COUNT(*) FROM comments WHERE comments.post_id = Post.id)'),
+      sequelize.literal(`(SELECT COUNT(*) FROM comments WHERE comments.post_id = ${postRef})`),
       'commentsCount',
     ],
   ];
@@ -104,7 +108,7 @@ function getPostAttributes(currentUserId) {
     const safeUserId = parseInt(currentUserId, 10);
     includeAttributes.push([
       sequelize.literal(
-        `(SELECT COUNT(*) FROM likes WHERE likes.post_id = Post.id AND likes.user_id = ${safeUserId}) > 0`
+        `((SELECT COUNT(*) FROM likes WHERE likes.post_id = ${postRef} AND likes.user_id = ${safeUserId}) > 0)${booleanExpr}`
       ),
       'isLiked',
     ]);
@@ -114,6 +118,7 @@ function getPostAttributes(currentUserId) {
     include: includeAttributes,
   };
 }
+
 
 /**
  * Get Explore Feed containing all posts sorted newest first.

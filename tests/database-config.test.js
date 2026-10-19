@@ -23,21 +23,29 @@ describe('Database Configuration Multi-Dialect', () => {
   });
 
   it('falls back to sqlite in-memory for test environment', () => {
-    const config = getDatabaseConfig(undefined, 'test');
+    const config = getDatabaseConfig(null, 'test');
     expect(config.dialect).toBe('sqlite');
     expect(config.storage).toBe(':memory:');
   });
 
   it('configures sqlite with custom storage path when provided', () => {
     const customPath = path.resolve(__dirname, 'test.sqlite');
-    const config = getDatabaseConfig(undefined, 'development', customPath);
+    const config = getDatabaseConfig(null, 'development', customPath);
     expect(config.dialect).toBe('sqlite');
     expect(config.storage).toBe(customPath);
   });
 
   it('defaults to database.sqlite for non-test environment when no storage path provided', () => {
-    const config = getDatabaseConfig(undefined, 'development');
-    expect(config.dialect).toBe('sqlite');
-    expect(config.storage).toMatch(/database\.sqlite$/);
+    const oldStorage = process.env.DB_STORAGE;
+    delete process.env.DB_STORAGE;
+    try {
+      const config = getDatabaseConfig(null, 'development');
+      expect(config.dialect).toBe('sqlite');
+      expect(config.storage).toMatch(/database\.sqlite$/);
+    } finally {
+      if (oldStorage) process.env.DB_STORAGE = oldStorage;
+    }
   });
 });
+
+

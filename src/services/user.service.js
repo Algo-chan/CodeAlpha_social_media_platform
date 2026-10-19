@@ -123,13 +123,17 @@ async function getUserProfile({ username, currentUserId = null }) {
     isFollowing = Boolean(followRecord);
   }
 
+  const isPostgres = sequelize.getDialect() === 'postgres';
+  const postRef = isPostgres ? '"Post"."id"' : 'Post.id';
+  const booleanExpr = isPostgres ? '::boolean' : '';
+
   const includeAttributes = [
     [
-      sequelize.literal('(SELECT COUNT(*) FROM likes WHERE likes.post_id = Post.id)'),
+      sequelize.literal(`(SELECT COUNT(*) FROM likes WHERE likes.post_id = ${postRef})`),
       'likesCount',
     ],
     [
-      sequelize.literal('(SELECT COUNT(*) FROM comments WHERE comments.post_id = Post.id)'),
+      sequelize.literal(`(SELECT COUNT(*) FROM comments WHERE comments.post_id = ${postRef})`),
       'commentsCount',
     ],
   ];
@@ -138,11 +142,12 @@ async function getUserProfile({ username, currentUserId = null }) {
     const safeUserId = parseInt(currentUserId, 10);
     includeAttributes.push([
       sequelize.literal(
-        `(SELECT COUNT(*) FROM likes WHERE likes.post_id = Post.id AND likes.user_id = ${safeUserId}) > 0`
+        `((SELECT COUNT(*) FROM likes WHERE likes.post_id = ${postRef} AND likes.user_id = ${safeUserId}) > 0)${booleanExpr}`
       ),
       'isLiked',
     ]);
   }
+
 
   const posts = await Post.findAll({
     where: { user_id: user.id },

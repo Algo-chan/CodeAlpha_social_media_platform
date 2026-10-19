@@ -4,6 +4,9 @@ const cloudinary = require('cloudinary').v2;
  * Checks if all required Cloudinary environment variables are configured and non-empty.
  */
 function isCloudinaryConfigured(env = process.env) {
+  if (env === process.env && process.env.NODE_ENV === 'test' && !process.env.TEST_ENABLE_CLOUDINARY) {
+    return false;
+  }
   return Boolean(
     env &&
     env.CLOUDINARY_CLOUD_NAME &&
@@ -14,6 +17,7 @@ function isCloudinaryConfigured(env = process.env) {
     String(env.CLOUDINARY_API_SECRET).trim()
   );
 }
+
 
 /**
  * Ensures Cloudinary SDK is initialized with environment variables if configured.
