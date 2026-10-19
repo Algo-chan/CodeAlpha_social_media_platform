@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node scripts/seed.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "test:e2e": "jest tests/e2e-flow.test.js"
   },
   "keywords": [
     "social-media",
