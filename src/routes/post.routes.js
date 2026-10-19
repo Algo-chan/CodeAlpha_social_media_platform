@@ -3,11 +3,12 @@ const postController = require('../controllers/post.controller');
 const interactionController = require('../controllers/interaction.controller');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
 const { uploadPostMedia } = require('../middleware/upload');
+const { postLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
 // Create a new post (multipart text + optional image)
-router.post('/', authenticateToken, uploadPostMedia, postController.create);
+router.post('/', authenticateToken, postLimiter, uploadPostMedia, postController.create);
 
 // List posts in Explore or Following feed
 router.get('/', optionalAuth, postController.list);

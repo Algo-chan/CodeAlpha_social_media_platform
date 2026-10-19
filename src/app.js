@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
-const { authLimiter, postLimiter } = require('./middleware/rateLimit');
+const { authLimiter } = require('./middleware/rateLimit');
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
 const userRoutes = require('./routes/user.routes');
@@ -42,7 +42,6 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Versioned API routes with rate limiters
 app.use('/api/v1/auth', authLimiter, authRoutes);
-app.post('/api/v1/posts', postLimiter);
 app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/users', userRoutes);
 
