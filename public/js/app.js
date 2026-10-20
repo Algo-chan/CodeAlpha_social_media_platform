@@ -40,6 +40,53 @@
   function show(el) { if (el) el.style.display = 'flex'; }
   function hide(el) { if (el) el.style.display = 'none'; }
 
+  /* ---- Account menu ------------------------------------------------------ */
+  var accountMenuOpen = false;
+
+  function setAccountMenu(open) {
+    if (typeof document === 'undefined') return;
+    var menu = document.getElementById('account-menu');
+    var trigger = document.getElementById('nav-user-profile-link');
+    if (!menu || !trigger) return;
+
+    accountMenuOpen = open;
+    menu.hidden = !open;
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function closeAccountMenu() { setAccountMenu(false); }
+
+  function initAccountMenu() {
+    if (typeof document === 'undefined') return;
+    var trigger = document.getElementById('nav-user-profile-link');
+    var menu = document.getElementById('account-menu');
+    if (!trigger || !menu) return;
+
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setAccountMenu(!accountMenuOpen);
+    });
+
+    // Choosing anything from the menu closes it.
+    menu.addEventListener('click', function (e) {
+      var item = e.target.closest ? e.target.closest('.account-menu-item') : null;
+      if (item) closeAccountMenu();
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!accountMenuOpen) return;
+      var wrap = document.getElementById('nav-auth-logged-in');
+      if (wrap && !wrap.contains(e.target)) closeAccountMenu();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !accountMenuOpen) return;
+      closeAccountMenu();
+      trigger.focus();
+    });
+  }
+
   function updateAuthUI() {
     if (typeof document === 'undefined') return;
 
@@ -50,7 +97,6 @@
 
     var loggedOutSection = document.getElementById('nav-auth-logged-out');
     var loggedInSection = document.getElementById('nav-auth-logged-in');
-    var userProfileLink = document.getElementById('nav-user-profile-link');
     var userNameEl = document.getElementById('nav-user-name');
     var userAvatarEl = document.getElementById('nav-user-avatar');
 
@@ -58,8 +104,26 @@
       hide(loggedOutSection);
       show(loggedInSection);
 
-      if (userProfileLink) userProfileLink.setAttribute('href', '#profile/' + encodeURIComponent(user.username));
       if (userNameEl) userNameEl.textContent = user.username;
+
+      var profileItem = document.getElementById('account-menu-profile');
+      if (profileItem) profileItem.setAttribute('href', '#profile/' + encodeURIComponent(user.username));
+
+      var handleEl = document.getElementById('account-menu-handle');
+      if (handleEl) handleEl.textContent = '@' + user.username;
+
+      var menuNameEl = document.getElementById('account-menu-name');
+      if (menuNameEl) menuNameEl.textContent = user.username;
+
+      var menuAvatarEl = document.getElementById('account-menu-avatar');
+      if (menuAvatarEl) {
+        var menuSrc = user.avatarUrl || user.avatar_url;
+        if (menuSrc) {
+          menuAvatarEl.innerHTML = '<img src="' + menuSrc + '" alt="" class="avatar-sm" loading="lazy">';
+        } else {
+          menuAvatarEl.textContent = (user.username || 'U').charAt(0).toUpperCase();
+        }
+      }
 
       if (userAvatarEl) {
         var src = user.avatarUrl || user.avatar_url;
@@ -73,10 +137,12 @@
     } else {
       show(loggedOutSection);
       hide(loggedInSection);
+      closeAccountMenu();
     }
   }
 
   function handleLogout() {
+    closeAccountMenu();
     if (global.api && typeof global.api.clearAuth === 'function') global.api.clearAuth();
     else {
       localStorage.removeItem('auth_token');
@@ -140,6 +206,8 @@
       });
       window.addEventListener('auth:change', updateAuthUI);
     }
+
+    initAccountMenu();
 
     var logoutBtn = document.getElementById('nav-logout-btn');
     if (logoutBtn) {
